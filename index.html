@@ -129,7 +129,9 @@ space.collide()は、使えなくなっています。また、tutorial3.pyを
         <h3 id="info0004">DLLファイルとLIBファイルを使用してsetup.pyをビルド</h3>
 <pre style = "font-size: 15px">
 
-「D:\ode-0.16.4\bindings\python」にode_doubled.dllとode_doubled.libをコピーします。
+前もってPythonとCythonとpkg-configとWindows SDKをインストールする必要があります。
+
+まず、「D:\ode-0.16.4\bindings\python」にode_doubled.dllとode_doubled.libをコピーします。
 次に、コマンドプロンプトを開いて、下記のように実行していきます。
 
 <pre style="background-color:#23262E;width:750px;padding:20px">
@@ -142,7 +144,6 @@ D:\>set LIB=%LIB%;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0\ucrt\x
 D:\>set Path=%Path%;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64
 D:\>set PKG_CONFIG_PATH=D:\ode-0.16.4
 </code></pre>
-
 　次に、「D:\ode-0.16.4\bindings\python」にあるode.pyxの3559行目のdSpaceCollide()関数と4463行目のdSpaceCollide2()関数
 をコメントアウトします。
 
