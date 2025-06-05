@@ -1,0 +1,131 @@
+@charset "utf-8";
+/*========================================================
+全般的なスタイル
+==========================================================*/
+*{
+	margin:0; padding:0;		/*全要素のマージン・パディングをリセット*/
+}
+body {
+	background-color:#cccccc;		/*ページ全体の背景色*/
+	background-image:url("images/bg_body.png");		/*ウェブページ全体の背景画像*/
+	font-size:95%;		/*フォントサイズを95%にする*/
+	font-family: "MS ゴシック",sans-serif;	/*フォントの種類をゴシック系にする*/
+	line-height:1.5;	/*行の高さを1.5倍にする*/
+	color:#000000;		/*文字の色を変える*/
+}
+div#pagebody{
+		width:1000px; 
+		margin:0 auto;	 /*内容全体をセンタリング*/
+		background-color:#ffffff;		/*内容全体の背景色*/
+		background-image:url("images/bg_pagebody.png");	/*コンテンツ全体の背景画像*/
+		background-repeat:repeat-y;						/*背景画像を縦方向に繰り返す*/
+}
+img {border:0;}	/*画像のボーダーを0にする*/
+
+
+
+
+/*=========================================
+ヘッダ
+===========================================*/
+div#header {
+		height:80px;		/*ヘッダ部分の高さ*/
+}
+div#header h1 {
+		padding:10px 0px 5px 20px;	/*見出しの位置調整*/
+		font-size:18px;				/*フォントのサイズ*/
+		font-family:Arial, Helvetica, sans-serif;	/*フォントの種類*/
+}
+div#header h1 a{text-decoration:none;}	/*リンクの下線を無くす*/
+
+/*=========================================
+タイトル2
+===========================================*/
+div#title2_id{
+	width:930px; height:200px;	 	/*メインメニュー部分の幅と高さ*/
+	margin:0px 40px;
+	font-size:200%;		/*フォントサイズを95%にする*/
+}
+
+/*=========================================
+メインメニュ－
+===========================================*/
+div#menu{
+	width:420px;  	/*メインメニュー部分の幅と高さ*/
+	margin:0px 20px;
+	/*padding:17px 0px 0px 100px;*/		/*パディング*/
+	font-size:16px;			/*フォントサイズ*/
+	background-image:url(images/bg_h2.png);	/*背景画像*/
+	background-repeat:no-repeat;			/*背景画像を」繰り返さない*/
+	background-color:#ebebeb;			/*背景色*/
+	float:left
+}
+#menu h3 {
+	display:block;						/*リンク部分をブロックに表示する*/
+	background-color:#ebebeb;	/*背景色*/
+	color:black;			/*文字色*/
+	display:block;		/*リンク部分をブロック表示にする*/
+	width:360px; 	/*幅と高さ*/
+	padding:10px 10px 10px 10px;	
+	margin:10px 10px 10px 10px;
+	text-align:center;			/*テキストをセンター揃えにする*/
+	text-decoration:none;		/*リンク部分を下線無しにする*/
+}
+#menu h3 a:hover {
+	background-color:#0000bb;	/*リンクにマウスが乗ったら背景色に変更する.*/
+}
+
+
+
+/*====================================
+info
+======================================*/
+.video_index{
+		width:200px; height:150px;		/*画像の表示サイズを指定*/
+		margin:20px 0px 20px 20px;		/*マージン*/
+		float:right;					/*画像を右寄せにする*/
+}
+code {
+	color: white;/* 文字色（文字を白に） */
+}
+hr {
+		clear:both;
+}
+#info_id{
+	width:500px; 	
+	float:left;	
+	padding:10px 20px 0px 0px;	/*パディング*/
+}
+#info_id h3 {
+	font-size:20px;		/*文字サイズ*/
+	width:400px;		/*横幅*/
+	padding:10px 0px 10px 20px;	/*パディング*/
+	background-color:#ebebeb;	/*背景色*/
+	color:#000000;		/*文字色*/
+	border-radius:3px;		/*角丸にする*/
+}
+#info_id2{
+	margin:0px 50px;
+	width:900px; 	
+	float:left;	
+	padding:10px 20px 0px 0px;	/*パディング*/
+}
+#info_id2 h3 {
+	font-size:20px;		/*文字サイズ*/
+	width:800px;		/*横幅*/
+	padding:10px 0px 10px 20px;	/*パディング*/
+	background-color:#ebebeb;	/*背景色*/
+	color:#000000;		/*文字色*/
+	border-radius:3px;		/*角丸にする*/
+}
+
+/*====================================
+フッタ
+======================================*/
+div#footer {
+	clear:both;					/*回り込みを解除*/
+	text-align:center; 			/*センター揃えにする*/
+	height:40px;				/*高さ*/
+	padding:20px 0px 0px 0px;	/*パディング*/
+	font-size:x-small;			/*フォントサイズを小さくする*/
+}

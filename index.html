@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+    <link rel="stylesheet" href="base.css">   
+    <!--
+    <link rel="stylesheet" media="screen and (min-width:481px)" href="base.css">
+    <link rel="stylesheet" media="screen and (max-width:480px)" href="base_sp.css">
+    -->
+    <title>prtfolio</title>
+
+</head>
+
+
+
+<body>
+
+<div id="pagebody">
+    
+    <!-- ヘッダー -->
+    <div id="header">
+        <h1><img src="images/logo.png" alt="portfolio"></h1>
+    </div>
+
+    <div id="title2_id">
+        <h2>PyODEの開発環境構築チュートリアル</h2> 
+        <h3>Windows環境でVisual Studio2022を利用して</h3> 
+        <h3>ODE-0.16.4とPythonをバインディングする方法</h3>         
+    </div>
+
+    <div id="menu">
+        <h3><a href="#info0001">tutorial2.pyの実行例</a></h3>
+        <p style="margin: 10px;">
+            tutorial2.pyを実行するには、動画表示用のPygameのインストールが必要です。
+        </p>
+        <hr>
+        <h3><a href="#info0002">tutorial3.py（コード修正有）の実行例</a></h3>  
+        <p style="margin: 10px;">
+            tutorial3.pyを実行するには、3D動画表示用のPyOpenGLのインストールが必要です。    
+        </p>       
+        <hr>
+        <h3><a href="#info0003">Visual Studio2022でODEをビルドしてDLLファイルとLIBファイルを作成</a></h3> 
+        <p style="margin: 10px;">
+            ビルドはx86(Win32)ではなく、x64で行う必要があります。
+        </p>
+        <hr>
+        <h3><a href="#info0004">DLLファイルとLIBファイルを使用してsetup.pyをビルド</a></h3> 
+        <p style="margin: 10px;">
+            前もってPythonとCythonとpkg-configとWindows SDKをインストールする必要があります。
+        </p>        
+        <hr>
+        <h3><a href="#info0005">DLLファイルとpydファイルを使用してPyODEのコードを含むPythonファイルを実行</a></h3>
+        <p style="margin: 10px;color:green">
+            near_callback()関数を使って衝突検出できます。
+        </p>
+    </div>
+    <div id="info_id">
+        <hr>
+        <h3 id="info0001">tutorial2.pyの実行例</h3>
+
+        <video src="videos/tutorial2.pyの実行結果.mp4" controls class="video_index"></video>
+<pre style = "font-size: 15px">
+
+tutorial2.pyは、ODE-0.16.4付属のPyODE
+で書かれたサンプルファイルです。tutori
+al2.pyは、二重振り子をシミュレーション
+します。tutorial2.pyは、コードを修正す
+ること無く実行出来ました。また、tutori
+al2.pyを実行するには、動画表示用のPyga
+meのインストールが必要です。
+</pre>
+        <hr>
+        <h3 id="info0002">tutorial3.py（コード修正有）の実行例</h3>
+        <video src="videos/tutorial3.py（コードの変更有）yの実行結果.mp4" controls class="video_index"></video>
+<pre style = "font-size: 15px">
+
+　tutorial3.pyは、ODE-0.16.4付属のPyODE
+で書かれたサンプルファイルです。衝突検出
+をシミュレーションします。コードを修正し
+て実行しました。
+　1つ目の修正は、「表示画面の作成」部
+分です。下記のように、188行目のコードに
+「b」を加えて、文字列をbyte列に変換しま
+した。 
+
+<pre class="andromeeda" style="background-color:#23262E;color:#D5CED9;padding:20px" tabindex="0"><code><div class="line"><span style="color:#FFE66D">glutCreateWindow</span><span style="color:#D5CED9"> (</span><span style="color:#C74DED">b</span><span style="color:#96E072">"testode"</span><span style="color:#D5CED9">)</span></div></code></pre>
+　2つ目の修正は、「衝突検出」部分です。269行目～277行目のコードを
+下記のコードに書き換えました。<span style="color:green">衝突検出を行うnear_callback関数を直
+接使うように修正しました。</span>そして、全てのオブジェクトに対して衝突検
+出するために、二重forループの中にnear_callback関数を置きました。
+
+<pre class="andromeeda" style="background-color:#23262E;color:#D5CED9;padding:20px" tabindex="0"><code><div class="line"><span style="color:#C74DED">for</span><span style="color:#D5CED9"> i </span><span style="color:#C74DED">in</span><span style="color:#FFE66D"> range</span><span style="color:#D5CED9">(n):</span></div><div class="line"><span style="color:#C74DED">    for</span><span style="color:#D5CED9"> g1 </span><span style="color:#C74DED">in</span><span style="color:#D5CED9"> geoms:    </span></div><div class="line"><span style="color:#C74DED">        for</span><span style="color:#D5CED9"> g2 </span><span style="color:#C74DED">in</span><span style="color:#D5CED9"> geoms:</span></div><div class="line"><span style="color:#FFE66D">            near_callback</span><span style="color:#D5CED9">((world,contactgroup), g1, g2)</span></div><div class="line">
+</div><div class="line"><span style="color:#C74DED">    for</span><span style="color:#D5CED9"> g1 </span><span style="color:#C74DED">in</span><span style="color:#D5CED9"> geoms:</span></div><div class="line"><span style="color:#FFE66D">        near_callback</span><span style="color:#D5CED9">((world,contactgroup), g1, floor)</span></div><div class="line">
+</div><div class="line"><span style="color:#A0A1A7CC">    # Simulation step</span></div><div class="line"><span style="color:#D5CED9">    world.</span><span style="color:#FFE66D">step</span><span style="color:#D5CED9">(dt</span><span style="color:#EE5D43">/</span><span style="color:#D5CED9">n)</span></div><div class="line"><span style="color:#A0A1A7CC">    # Remove all contact joints</span></div><div class="line"><span style="color:#D5CED9">    contactgroup.</span><span style="color:#FFE66D">empty</span><span style="color:#D5CED9">()</span></div></code></pre>
+ 修正前のコードではspace.collide()が使われていましたが、環境
+構築時のエラー回避のために、ode.pyxの3559行目のdSpaceCollide()
+関数と4463行目のdSpaceCollide2()関数をコメントアウトしたので、
+space.collide()は、使えなくなっています。また、tutorial3.pyを
+実行するには、3D動画表示用のPyOpenGLのインストールが必要です。
+</pre>     
+    </div>
+    <div id="info_id2">
+        <hr>
+        <h3 id="info0003">Visual Studio2022でODEのlibファイルとdllファイルを作成</h3>
+<pre style = "font-size: 15px">
+
+・Dドライブ直下にode-0.16.4フォルダをコピーします。
+・コマンドプロンプトで、下記のようにpremake4.exeファイルを実行します。
+
+<code style="background-color:#23262E;padding:20px">D:\ode-0.16.4\build>premake4.exe --with-tests --with-demos vs2010</code>
+
+・「D:\ode-0.16.4\build\vs2010\ode.sln」が作成されるので、ode.slnファイルを開きます。
+・VisualStudio作業画面の上部の「ビルド」タブの下にある「Win32」の欄から「構成マネージャ」を選びます。
+・「構成マネージャ」の「アクティブソリューションプラットホーム」欄から「新規作成」を選びます。
+・「新しいプラットホーム・・・」から「x64」を選びます。「ビルド」タブの下にある「Win32」の欄が「x64」に変わります。
+・VisualStudio作業画面右側の「ソリューションエクスプローラー」の中にある、下から二番目の「ode」という名前のプロジェクト
+をクリックして選択します。
+・VisualStudio作業画面の上部の「プロジェクト」タブをクリックし、「プロパティ」をクリックします。
+・「odeプロパティページ」の「構成プロパティ」の「全般」の「構成の種類」を「ダイナミック ライブラリ (.dll)」にし、「ode
+プロパティページ」の「OK」ボタンを押します。
+・VisualStudio作業画面の上部の「ビルド」タブをクリックして、「odeのビルド」をクリックすると複数のDLLファイルとLIBファイ
+ルが作成されます。
+・PyODEの環境構築で使うDLLファイルは、「D:\ode-0.16.4\build\vs2010\x64\DebugDoubleDLL」に作成されるode_doubled.dllファ
+イルを使います。LIBファイルは、「D:\ode-0.16.4\lib\DebugDoubleDLL」に作成されるode_doubled.libファイルを使います。
+
+</pre>
+        <hr>
+        <h3 id="info0004">setup.pyをビルドして*.pydファイルを作成</h3>
+<pre style = "font-size: 15px">
+
+「D:\ode-0.16.4\bindings\python」にode_doubled.dllとode_doubled.libをコピーします。
+次に、コマンドプロンプトを開いて、下記のように実行していきます。
+
+<pre style="background-color:#23262E;width:750px;padding:20px">
+<code>D:\>path=%path%;c:\pkg-config\bin
+D:\>set include=%include%;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt
+D:\>set include=%include%;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared
+D:\>set include=%include%;D:\ode-0.16.4\include
+D:\>set LIB=%LIB%;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0\um\x64
+D:\>set LIB=%LIB%;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0\ucrt\x64
+D:\>set Path=%Path%;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64
+D:\>set PKG_CONFIG_PATH=D:\ode-0.16.4
+</code></pre>
+
+　次に、「D:\ode-0.16.4\bindings\python」にあるode.pyxの3559行目のdSpaceCollide()関数と4463行目のdSpaceCollide2()関数
+をコメントアウトします。
+
+　次に、「D:\ode-0.16.4」にあるode.pc.inの名前をode.pcに変更して、3行目と10行目を下記のように書き換えます。
+
+3行目：<code style="background-color:#ffffff;padding:10px"><span style="color:#000000">libdir = ode_doubled.lib</span></code>
+
+10行目：<code style="background-color:#ffffff;padding:10px"><span style="color:#000000">Libs: ${libdir}</span></code>
+
+　次に、コマンドプロンプトで、下記のようにsetup.pyをビルドします。
+
+<code style="background-color:#23262E;padding:20px">D:\ode-0.16.4\bindings\python>python setup.py build_ext</code>
+
+「D:\ode-0.16.4\bindings\python\build\lib.win-amd64-cpython-312」にode.cp312-win_amd64.pydファイルが作成されます。
+ode.cp312-win_amd64.pydは、PyODEのコードを実行するのに必要なファイルです。
+
+</pre> 
+        <hr>
+        <h3 id="info0005">DLLファイルとpydファイルを使用してPyODEのコードを含むPythonファイルを実行</h3>
+
+<pre style = "font-size: 15px">
+
+ode.cp312-win_amd64.pydファイルとode_doubled.dllファイルを「D:\ode-0.16.4\bindings\python\demos」にコピーし、コマンド
+プロンプトから下記のようにPythonで実行すると、PyODEのコードを含むtutorial2.pyファイルの実行が可能になります。
+
+<code style="background-color:#23262E;padding:20px">D:\ode-0.16.4\bindings\python\demos>python tutorial2.py</code>
+
+また、ode.pyxのコードを修正したため、space.collide()が使えなくなっていますが、<span style="color:green">代わりにnear_callback()関数を直接使って
+衝突検出できます。</span>
+
+</pre> 
+    </div>
+
+    <!--フッタ-->
+    <div id="footer"><small>hiramatsuyuusuke</small></div>
+
+</div>
+</body>
+</html>
