@@ -109,7 +109,7 @@ space.collide()は、使えなくなっています。また、tutorial3.pyを
 ・Dドライブ直下にode-0.16.4フォルダをコピーします。
 ・コマンドプロンプトで、下記のようにpremake4.exeファイルを実行します。
 
-<code style="background-color:#23262E;padding:20px">D:\ode-0.16.4\build>premake4.exe --with-tests --with-demos vs2010</code>
+<code style="background-color:#23262E;padding:20px"><span style="color:rgb(180, 180, 180)">D:\ode-0.16.4\build></span>premake4.exe --with-tests --with-demos vs2010</code>
 
 ・「D:\ode-0.16.4\build\vs2010\ode.sln」が作成されるので、ode.slnファイルを開きます。
 ・VisualStudio作業画面の上部の「ビルド」タブの下にある「Win32」の欄から「構成マネージャ」を選びます。
@@ -139,14 +139,14 @@ space.collide()は、使えなくなっています。また、tutorial3.pyを
 次に、コマンドプロンプトを開いて、下記のように実行していきます。
 
 <pre style="background-color:#23262E;width:750px;padding:20px">
-<code>D:\>path=%path%;c:\pkg-config\bin
-D:\>set include=%include%;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt
-D:\>set include=%include%;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared
-D:\>set include=%include%;D:\ode-0.16.4\include
-D:\>set LIB=%LIB%;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0\um\x64
-D:\>set LIB=%LIB%;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0\ucrt\x64
-D:\>set Path=%Path%;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64
-D:\>set PKG_CONFIG_PATH=D:\ode-0.16.4
+<code><span style="color:rgb(180, 180, 180)">D:\></span>path=%path%;c:\pkg-config\bin
+<span style="color:rgb(180, 180, 180)">D:\></span>set include=%include%;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt
+<span style="color:rgb(180, 180, 180)">D:\></span>set include=%include%;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared
+<span style="color:rgb(180, 180, 180)">D:\></span>set include=%include%;D:\ode-0.16.4\include
+<span style="color:rgb(180, 180, 180)">D:\></span>set LIB=%LIB%;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0\um\x64
+<span style="color:rgb(180, 180, 180)">D:\></span>set LIB=%LIB%;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0\ucrt\x64
+<span style="color:rgb(180, 180, 180)">D:\></span>set Path=%Path%;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64
+<span style="color:rgb(180, 180, 180)">D:\></span>set PKG_CONFIG_PATH=D:\ode-0.16.4
 </code></pre>
 　次に、「D:\ode-0.16.4\bindings\python」にあるode.pyxの3559行目のdSpaceCollide()関数と4463行目のdSpaceCollide2()関数
 をコメントアウトします。
@@ -159,7 +159,7 @@ D:\>set PKG_CONFIG_PATH=D:\ode-0.16.4
 
 　次に、コマンドプロンプトで、下記のようにsetup.pyをビルドします。
 
-<code style="background-color:#23262E;padding:20px">D:\ode-0.16.4\bindings\python>python setup.py build_ext</code>
+<code style="background-color:#23262E;padding:20px"><span style="color:rgb(180, 180, 180)">D:\ode-0.16.4\bindings\python></span>python setup.py build_ext</code>
 
 「D:\ode-0.16.4\bindings\python」にode.cファイルが作成され、コマンドプロンプトに「#error:  You must #define dSINGLE or 
 dDOUBLE」が表示されます。
@@ -169,7 +169,7 @@ dDOUBLE」が表示されます。
 
 もう一度、コマンドプロンプトで、下記のようにsetup.pyをビルドします。
 
-<code style="background-color:#23262E;padding:20px">D:\ode-0.16.4\bindings\python>python setup.py build_ext</code>
+<code style="background-color:#23262E;padding:20px"><span style="color:rgb(180, 180, 180)">D:\ode-0.16.4\bindings\python></span>python setup.py build_ext</code>
 
 「D:\ode-0.16.4\bindings\python\build\lib.win-amd64-cpython-312」にode.cp312-win_amd64.pydファイルが作成されます。
 ode.cp312-win_amd64.pydは、PyODEのコードを実行するのに必要なファイルです。
@@ -183,7 +183,7 @@ ode.cp312-win_amd64.pydは、PyODEのコードを実行するのに必要なフ�
 ode.cp312-win_amd64.pydファイルとode_doubled.dllファイルを「D:\ode-0.16.4\bindings\python\demos」にコピーし、コマンド
 プロンプトから下記のようにPythonで実行すると、PyODEのコードを含むtutorial2.pyファイルの実行が可能になります。
 
-<code style="background-color:#23262E;padding:20px">D:\ode-0.16.4\bindings\python\demos>python tutorial2.py</code>
+<code style="background-color:#23262E;padding:20px"><span style="color:rgb(180, 180, 180)">D:\ode-0.16.4\bindings\python\demos></span>python tutorial2.py</code>
 
 また、ode.pyxのコードを修正したため、space.collide()が使えなくなっていますが、<span style="color:green">代わりにnear_callback()関数を直接使って
 衝突検出できます。</span>
