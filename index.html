@@ -131,7 +131,9 @@ space.collide()は、使えなくなっています。また、tutorial3.pyを
 
 前もってPythonとCythonとpkg-configとWindows SDKをインストールする必要があります。
 
-まず、「D:\ode-0.16.4\bindings\python」にode_doubled.dllとode_doubled.libをコピーします。
+まず、「D:\ode-0.16.4\bindings\python」に、
+<code style="color:red">「D:\ode-0.16.4\build\vs2010\x64\DebugDoubleDLL」</code>に作成されたode_doubled.dllファイルと
+<code style="color:red">「D:\ode-0.16.4\lib\DebugDoubleDLL」</code>に作成されたode_doubled.libファイルをコピーします。
 次に、コマンドプロンプトを開いて、下記のように実行していきます。
 
 <pre style="background-color:#23262E;width:750px;padding:20px">
@@ -154,6 +156,16 @@ D:\>set PKG_CONFIG_PATH=D:\ode-0.16.4
 10行目：<code style="background-color:#ffffff;padding:10px"><span style="color:#000000">Libs: ${libdir}</span></code>
 
 　次に、コマンドプロンプトで、下記のようにsetup.pyをビルドします。
+
+<code style="background-color:#23262E;padding:20px">D:\ode-0.16.4\bindings\python>python setup.py build_ext</code>
+
+「D:\ode-0.16.4\bindings\python」にode.cファイルが作成され、コマンドプロンプトに「#error:  You must #define dSINGLE or 
+dDOUBLE」が表示されます。
+　次に、「D:\ode-0.16.4\bindings\python」に作成されたode.cファイルの先頭（21行目）に下記のコードを追加します。
+
+<code style="background-color:#23262E;padding:20px"><span style="color:#C74DED">#define</span><span style="color:#FFE66D"> dDOUBLE</span></code>
+
+もう一度、コマンドプロンプトで、下記のようにsetup.pyをビルドします。
 
 <code style="background-color:#23262E;padding:20px">D:\ode-0.16.4\bindings\python>python setup.py build_ext</code>
 
