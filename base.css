@@ -85,6 +85,11 @@ info
 		margin:20px 0px 20px 20px;		/*マージン*/
 		float:right;					/*画像を右寄せにする*/
 }
+.video_index2{
+		width:400px; height:300px;		/*画像の表示サイズを指定*/
+		margin:20px 0px 20px 20px;		/*マージン*/
+		float:right;					/*画像を右寄せにする*/
+}
 code {
 	color: white;/* 文字色（文字を白に） */
 }
