@@ -30,7 +30,7 @@
     </div>
     <div id="info_id2">
         <hr>
-        <h3 id="info0003">ロボットビジョン1 「転がる箱ロボットの衝突回避」の実行例</h3>
+        <h3 id="info0001">「転がる箱ロボットの衝突回避」の実行例</h3>
 <pre style = "font-size: 15px">
     
 箱ロボットの視界から障害物に衝突するかどうかを判定して、衝突しない方に転がって進みます。
@@ -42,6 +42,37 @@ ResNet18の学習は、左側の動画の3D空間から作成した学習用画�
         <video src="videos/box_robot_vision2.mp4" controls class="video_index2"></video>
         <video src="videos/box_robot_vision1.mp4" controls class="video_index2"></video>
         <img src="images/product1_1.jpg" alt="resnet18" >
+        <hr>
+        <h3 id="info0002">「転がる箱ロボットの衝突回避」の実装</h3>
+<pre style = "font-size: 15px">
+    
+PyODE付属のtutorial3.pyと同じ内容のbox_robo_vision1.pyを作成して、2つを比較しながらbox_robo_vision1.pyを変更していく
+やり方で「転がる箱ロボットの衝突回避」を実装していきます。
+
+<h2>まずはimportの追加</h2>
+box_robo_vision1.pyのソースコードに下記のコードを追加します。
+追加する場所は、tutorial3.pyの16行目の「<code style="color:rgb(89, 89, 89)">import ode</code>」に対応する行の次の行です。
+インポートには、前もって、PIL（Pillow）、PyTorch、Torchvisionのインストールが必要です。
+
+<pre class="andromeeda" style="background-color:#23262E;color:#D5CED9;width:400px;padding:20px" ><code><div class="line"><span style="color:#C74DED">from</span><span style="color:#F39C12"> PIL</span><span style="color:#C74DED"> import</span><span style="color:#D5CED9"> Image</span></div><div class="line"><span style="color:#C74DED">from</span><span style="color:#F39C12"> PIL</span><span style="color:#C74DED"> import</span><span style="color:#D5CED9"> ImageOps</span></div><div class="line"><span style="color:#C74DED">import</span><span style="color:#D5CED9"> torch</span></div><div class="line"><span style="color:#C74DED">from</span><span style="color:#D5CED9"> torch </span><span style="color:#C74DED">import</span><span style="color:#D5CED9"> nn</span></div><div class="line"><span style="color:#C74DED">import</span><span style="color:#D5CED9"> torchvision.transforms </span><span style="color:#C74DED">as</span><span style="color:#D5CED9"> transforms</span></div><div class="line"><span style="color:#C74DED">import</span><span style="color:#D5CED9"> torchvision.models </span><span style="color:#C74DED">as</span><span style="color:#D5CED9"> models</span></div></code></pre>
+
+<h2>prepare_GL()の内容を変更</h2>
+box_robo_vision1.pyのソースコードを下記のように変更します。
+変更する場所は、tutorial3.pyの28～60行目の「<code style="color:rgb(89, 89, 89)">prepare_GL()</code>」関数に対応する部分です。
+<pre class="andromeeda" style="background-color:#23262E;color:#D5CED9;width:600px;padding:20px"><code><div class="line"><span style="color:#C74DED">def</span><span style="color:#FFE66D"> prepare_GL</span><span style="color:#D5CED9">():</span></div><div class="line"><span style="color:#96E072">    """Prepare drawing.</span></div><div class="line"><span style="color:#96E072">    """</span></div><div class="line"><span style="color:#A0A1A7CC">    # Viewport</span></div><div class="line"><span style="color:#FFE66D">    glViewport</span><span style="color:#D5CED9">(</span><span style="color:#F39C12">0</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">0</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">320</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">320</span><span style="color:#D5CED9">) </span><span style="color:#A0A1A7CC">#ビューポートの大きさを320×320にする</span></div><div class="line">
+</div><div class="line"><span style="color:#A0A1A7CC">    # Initialize</span></div><div class="line"><span style="color:#FFE66D">    glClearColor</span><span style="color:#D5CED9">(</span><span style="color:#F39C12">0</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">0</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">0</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">0</span><span style="color:#D5CED9">)   </span><span style="color:#A0A1A7CC">#背景を黒にする</span></div><div class="line"><span style="color:#FFE66D">    glClear</span><span style="color:#D5CED9">(</span><span style="color:#F39C12">GL_COLOR_BUFFER_BIT</span><span style="color:#EE5D43"> |</span><span style="color:#F39C12"> GL_DEPTH_BUFFER_BIT</span><span style="color:#D5CED9">);</span></div><div class="line"><span style="color:#FFE66D">    glEnable</span><span style="color:#D5CED9">(</span><span style="color:#F39C12">GL_DEPTH_TEST</span><span style="color:#D5CED9">)</span></div><div class="line"><span style="color:#FFE66D">    glDisable</span><span style="color:#D5CED9">(</span><span style="color:#F39C12">GL_LIGHTING</span><span style="color:#D5CED9">)</span></div><div class="line"><span style="color:#FFE66D">    glEnable</span><span style="color:#D5CED9">(</span><span style="color:#F39C12">GL_LIGHTING</span><span style="color:#D5CED9">)  </span></div><div class="line"><span style="color:#FFE66D">    glEnable</span><span style="color:#D5CED9">(</span><span style="color:#F39C12">GL_NORMALIZE</span><span style="color:#D5CED9">)</span></div><div class="line"><span style="color:#FFE66D">    glShadeModel</span><span style="color:#D5CED9">(</span><span style="color:#F39C12">GL_FLAT</span><span style="color:#D5CED9">)</span></div><div class="line">
+</div><div class="line"><span style="color:#A0A1A7CC">    # Projection</span></div><div class="line"><span style="color:#FFE66D">    glMatrixMode</span><span style="color:#D5CED9">(</span><span style="color:#F39C12">GL_PROJECTION</span><span style="color:#D5CED9">)</span></div><div class="line"><span style="color:#FFE66D">    glLoadIdentity</span><span style="color:#D5CED9">()</span></div><div class="line"><span style="color:#FFE66D">    gluPerspective</span><span style="color:#D5CED9"> (</span><span style="color:#F39C12">45</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">1.3333</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">0.2</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">20</span><span style="color:#D5CED9">)</span></div><div class="line">
+</div><div class="line"><span style="color:#A0A1A7CC">    # Initialize ModelView matrix</span></div><div class="line"><span style="color:#FFE66D">    glMatrixMode</span><span style="color:#D5CED9">(</span><span style="color:#F39C12">GL_MODELVIEW</span><span style="color:#D5CED9">)</span></div><div class="line"><span style="color:#FFE66D">    glLoadIdentity</span><span style="color:#D5CED9">()</span></div><div class="line">
+</div><div class="line"><span style="color:#A0A1A7CC">    # Light source</span></div><div class="line"><span style="color:#FFE66D">    glLightfv</span><span style="color:#D5CED9">(</span><span style="color:#F39C12">GL_LIGHT0</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">GL_POSITION</span><span style="color:#D5CED9">,[ </span><span style="color:#F39C12">0.3</span><span style="color:#D5CED9">, </span><span style="color:#F39C12">1</span><span style="color:#D5CED9">, </span><span style="color:#F39C12">0.3</span><span style="color:#D5CED9">, </span><span style="color:#F39C12">0</span><span style="color:#D5CED9">])  </span><span style="color:#A0A1A7CC">#照明の位置を変更</span></div><div class="line"><span style="color:#FFE66D">    glLightfv</span><span style="color:#D5CED9">(</span><span style="color:#F39C12">GL_LIGHT0</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">GL_DIFFUSE</span><span style="color:#D5CED9">,[</span><span style="color:#F39C12">1</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">1</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">1</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">1</span><span style="color:#D5CED9">])</span></div><div class="line"><span style="color:#FFE66D">    glLightfv</span><span style="color:#D5CED9">(</span><span style="color:#F39C12">GL_LIGHT0</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">GL_SPECULAR</span><span style="color:#D5CED9">,[</span><span style="color:#F39C12">1</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">1</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">1</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">1</span><span style="color:#D5CED9">])</span></div><div class="line"><span style="color:#FFE66D">    glLightfv</span><span style="color:#D5CED9">(</span><span style="color:#F39C12">GL_LIGHT0</span><span style="color:#D5CED9">, </span><span style="color:#F39C12">GL_AMBIENT</span><span style="color:#D5CED9">, [</span><span style="color:#F39C12">0.5</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">0.5</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">0.5</span><span style="color:#D5CED9">,</span><span style="color:#F39C12">0.5</span><span style="color:#D5CED9">]) </span><span style="color:#A0A1A7CC">#環境光の設定</span></div><div class="line"><span style="color:#FFE66D">    glEnable</span><span style="color:#D5CED9">(</span><span style="color:#F39C12">GL_LIGHT0</span><span style="color:#D5CED9">)</span></div><div class="line">
+</div><div class="line"><span style="color:#A0A1A7CC">    # View transformation</span></div><div class="line"><span style="color:#A0A1A7CC">    #gluLookAt (2.4, 3.6, 4.8, 0.5, 0.5, 0, 0, 1, 0)    #視点変換をコメントアウト</span></div></code></pre>
+
+<h2>drop_object()の内容を変更</h2>
+
+
+</pre>
+
+
+
     </div> 
 
     <!--フッタ-->
