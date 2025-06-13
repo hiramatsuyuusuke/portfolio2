@@ -1,4 +1,5 @@
 #ODE-0.16.4のtutorial3.pyを書き換えたコード
+#https://hiramatsuyuusuke.github.io/portfolio2/product1.html
 
 import sys, os, random, time
 from math import *
