@@ -1,4 +1,4 @@
-#ODE-0.16.4のtutorial3.pyを書き換えたコード
+#ODE-0.16.4のtutorial3.pyを書き換えたコードです。
 #https://hiramatsuyuusuke.github.io/portfolio2/product1.html
 
 import sys, os, random, time
@@ -471,7 +471,7 @@ Learned_model = models.resnet18(weights = None)
 num_classes = 2 #衝突するクラスと衝突しないクラスの2つ
 Learned_model.fc = nn.Linear(Learned_model.fc.in_features, num_classes)
 #3D空間の画像を使って学習したResNet18の読み込み
-Learned_model.load_state_dict(torch.load("Weight1_24.pth", weights_only=True))
+Learned_model.load_state_dict(torch.load("Weight1.pth", weights_only=True))
 Learned_model.eval()  # 推論モードに切り替え
 
 
