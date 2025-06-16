@@ -512,7 +512,7 @@ def _drawfunc1 ():
     if objcount >= 1:
         x,y,z = bodies[0].getPosition()
     #箱ロボットの視点
-    gluLookAt ( x, y, z, x + gaze_x, 0.2, z + gaze_z, 0, 1, 0)#（視点位置、注視点位置、姿勢方向）
+    gluLookAt ( x, y, z, x + gaze_x, 0.1, z + gaze_z, 0, 1, 0)#（視点位置、注視点位置、姿勢方向）
 
 
     for index, b in enumerate(bodies):
