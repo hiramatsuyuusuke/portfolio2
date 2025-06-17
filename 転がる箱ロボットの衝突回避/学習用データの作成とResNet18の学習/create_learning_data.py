@@ -429,8 +429,8 @@ ops0=[]  #箱が作成される前の障害物の座標。
 ops1=[]  #箱が転がる前の障害物の座標。箱と障害物が重なっていれば、障害物が移動する。
 ops2=[]  #箱が転がった後の障害物の座標。箱と障害物が衝突すれば、障害物が移動する。
 class_label = []  #学習用のクラスラベル
-box_px_min =- 4.0
-box_py_min =- 4.0
+box_px_min = -4.0
+box_py_min = -4.0
 box_px_max = 4.0
 box_py_max = 4.0
 box_px = box_px_min  #箱のx座標の初期値をセット
@@ -611,7 +611,7 @@ def _idlefunc ():
             counter = 180   #カウンターを最初に戻す
         
         #4つの方角（北東南西）の処理が終わったときに衝突判定の学習用クラスラベルデータを出力
-        if box_px > 4.0 and box_py > 4.0 and rolling_direc_count == 4:
+        if box_px > box_px_max and box_py > box_py_max and rolling_direc_count == 4:
             with open("box_collision_class_label.txt","w") as o:
                 for index, v in enumerate(class_label):
                     if index == len(class_label) - 1:
