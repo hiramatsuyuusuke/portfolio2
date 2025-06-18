@@ -420,23 +420,48 @@ counter = 0
 objcount = 0
 lasttime = time.time()
 
+#n
 gaze_x = 0 #視線方向の初期値をセット
 gaze_z = -10 #視線方向の初期値をセット
 Force_x = 0 #箱を押す力の方向の初期値をセット
 Force_z = -100  #箱を押す力の方向の初期値をセット
+"""
+#e
+gaze_x = 10 
+gaze_z = 0 
+Force_x = 100 
+Force_z = 0 
+
+#s
+gaze_x = 0                
+gaze_z = 10
+Force_x = 0
+Force_z = 100
+
+#w
+gaze_x = -10 
+gaze_z = 0
+Force_x = -100 
+Force_z = 0
+"""
+
+capimgnum = 0
+rolling_direc_count_max = 4
+
 rolling_direc_count = 0   #箱を転がす方角のカウント。北=1、東=2、南=3、西=4
 ops0=[]  #箱が作成される前の障害物の座標。
 ops1=[]  #箱が転がる前の障害物の座標。箱と障害物が重なっていれば、障害物が移動する。
 ops2=[]  #箱が転がった後の障害物の座標。箱と障害物が衝突すれば、障害物が移動する。
 class_label = []  #学習用のクラスラベル
-box_px_min = -4.0
-box_py_min = -4.0
-box_px_max = 4.0
-box_py_max = 4.0
-box_px = box_px_min  #箱のx座標の初期値をセット
-box_py = box_px_min  #箱のy座標の初期値をセット
+
+box_px_start = -4.0
+box_pz_start = -4.0
+box_px_end = 4.0
+box_pz_end = 4.0
+box_px = box_px_start  #箱のx座標の初期値をセット
+box_pz = box_pz_start  #箱のy座標の初期値をセット
 box_dpx = 0.25  #箱のx座標の探索の刻み幅
-box_dpy = 0.25  #箱のy座標の探索の刻み幅
+box_dpz = 0.25  #箱のy座標の探索の刻み幅
 
 
 #テクスチャ読み込み#
@@ -509,13 +534,13 @@ def _idlefunc ():
     global gaze_x, gaze_z, Force_x, Force_z
     global bodies, geoms, subwinnum, world,contactgroup
     global rolling_direc_count, ops0, ops1, ops2, class_label
-    global box_px, box_py, box_dpx, box_dpy, box_px_min, box_py_min, box_px_max, box_py_max
+    global box_px, box_pz, box_dpx, box_dpz, box_px_start, box_pz_start, box_px_end, box_pz_end
 
     #t = dt - (time.time() - lasttime)
     #if (t > 0):
         #time.sleep(t)
 
-    if rolling_direc_count < 5:#探索する方角の回数が5よりも小さいとき。北東南西の４回。
+    if rolling_direc_count <= rolling_direc_count_max:#探索する方角の回数が4以下のとき。北東南西の４回。
         counter += 1
         if counter==181:  
 
@@ -526,22 +551,24 @@ def _idlefunc ():
             ops1.clear()  #箱が転がる前の障害物の座標。箱と障害物が重なっていれば、障害物が移動する。
             ops2.clear()  #箱が転がった後の障害物の座標。箱と障害物が衝突すれば、障害物が移動する。
 
+            #room1
             drop_object(0.3, 1.0, 6.0,
-                        2.0, 0.51, 1.49, 1e-5)  #(lx, ly, lz, px, py, pz, density)       
+                        2.0, 0.51, 1.49, 1e-6)  #(lx, ly, lz, px, py, pz, density)       
             drop_object(0.3, 1.0, 6.0,
-                        -2.0, 0.51, -1.49, 1e-5)  #(lx, ly, lz, px, py, pz, density)   
+                        -2.0, 0.51, -1.49, 1e-6)  #(lx, ly, lz, px, py, pz, density)   
         
+            #外周
             drop_object(0.3, 1.0, 8.99,
-                        -4.651, 0.51, 0.001, 1e-5)  #(lx, ly, lz, px, py, pz, density)  
+                        -4.651, 0.51, 0.001, 1e-6)  #(lx, ly, lz, px, py, pz, density)  
             drop_object(0.3, 1.0, 8.99,
-                        4.651, 0.51, 0.001, 1e-5)  #(lx, ly, lz, px, py, pz, density)             
+                        4.651, 0.51, 0.001, 1e-6)  #(lx, ly, lz, px, py, pz, density)             
             drop_object(8.99, 1.0, 0.3,
-                        0.001, 0.51, 4.651, 1e-5)  #(lx, ly, lz, px, py, pz, density)        
+                        0.001, 0.51, 4.651, 1e-6)  #(lx, ly, lz, px, py, pz, density)        
             drop_object(8.99, 1.0, 0.3,
-                        0.001, 0.51, -4.651, 1e-5)  #(lx, ly, lz, px, py, pz, density)  
+                        0.001, 0.51, -4.651, 1e-6)  #(lx, ly, lz, px, py, pz, density)  
          
             """        
-            
+            #room2
             drop_object(2.0, 1.0, 0.3,
                         0.0, 3.0, -2.0, 1e-5)  #(lx, ly, lz, px, py, pz, density)             
             drop_object(0.3, 1.0, 2.0,
@@ -561,47 +588,69 @@ def _idlefunc ():
             drop_object(0.3, 1.0, 1.0,
                         1.2, 3.0, -4.0, 1e-5)  #(lx, ly, lz, px, py, pz, density)             
             """  
+ 
+                    
+        #転がる前の箱と障害物が重なっていないかを判定。オブジェクトを落下させているので、counterを少し遅らせる。
+        if counter==190:     
 
-            #箱ロボットを最後に作成する
-            drop_object(0.3, 0.3, 0.3,
-                        box_px, 0.16, box_py, 10.0)  #(lx, ly, lz, px, py, pz, density)
-            
-        #転がる前の箱と障害物が重なっていないかを判定    
-        if counter==198:     
+            #始めの一回だけ、箱ロボットと障害物が重なっていない状態の座標を保持。探索の最初に箱と障害物が重なっていないことが必要。
+            if rolling_direc_count == 0:
+                rolling_direc_count = 1
+                #rolling_direc_count = rolling_direc_count_max
+                ##始めの一回だけ、箱が作成される前の障害物の座標を取得
+                for index, b in enumerate(bodies):
+                    if index < len(bodies):
+                        ops0.append(b.getPosition ())
+            #西=4
+            if rolling_direc_count == 4:
+                #箱ロボットを最後に作成する
+                drop_object(0.3, 0.3, 0.3,
+                            -box_px, 0.16, box_pz, 10.0)  #(lx, ly, lz, px, py, pz, density)                           
+            #東=2
+            if rolling_direc_count == 2:
+                #箱ロボットを最後に作成する
+                drop_object(0.3, 0.3, 0.3,
+                            box_px, 0.16, box_pz, 10.0)  #(lx, ly, lz, px, py, pz, density)
+            #北=1
+            if rolling_direc_count == 1:
+                #箱ロボットを最後に作成する
+                drop_object(0.3, 0.3, 0.3,
+                            box_pz, 0.16, -box_px, 10.0)  #(lx, ly, lz, px, py, pz, density)   
+            #南=3              
+            if rolling_direc_count == 3:
+                #箱ロボットを最後に作成する
+                drop_object(0.3, 0.3, 0.3,
+                            box_pz, 0.16, box_px, 10.0)  #(lx, ly, lz, px, py, pz, density)   
+
+        if counter==200:    
             #障害物の座標を取得
             for index, b in enumerate(bodies):
                 if index < len(bodies)-1:
                     ops1.append(b.getPosition ())
-
-            #始めの一回だけ、箱ロボットと障害物が重なっていない状態の座標を保持。探索の最初に箱と障害物が重なっていないことが必要。
-            if rolling_direc_count == 0:
-                ops0 = copy.deepcopy(ops1)  #箱が作成される前の障害物の座標。
-                rolling_direc_count = 1
-
             #最初に箱と障害物が重なっているとき（障害物が移動するので、座標が変化している）
             if ops0 != ops1:
                 print(2)
                 counter = 180   #カウンターを最初に戻す。画像のキャプチャとラベルの取得は行わない。
 
         #学習用の画像のキャプチャ
-        if counter==199:
-            capture2().save( "img/test" + str(len(class_label)) + ".jpg")  # 縮小した画像を保存
+        if counter==201:
+            capture2().save( "img/test" + str(capimgnum + len(class_label)) + ".jpg")  # 縮小した画像を保存
 
         #箱を転がす 
-        if counter==200:     
+        if counter==202:     
             bodies[len(bodies)-1].addForce(( Force_x, 0, Force_z))
         if counter==210:     
             bodies[len(bodies)-1].addForce(( Force_x, 0, Force_z))       
 
         #衝突するか衝突しないかの学習用クラスラベルデータの取得
-        if counter==250:   
+        if counter==240:   
             #現在の障害物の座標を取得
             for index, b in enumerate(bodies):
                 if index < len(bodies)-1:
                     ops2.append(b.getPosition ())
 
-            #衝突するか衝突しないかの学習用クラスラベルを取得
-            if ops1 == ops2:
+            #衝突するか衝突しないかの学習用クラスラベルを取得          
+            if ops0 == ops2:
                 print(0)
                 class_label.append(0)
             else:
@@ -610,54 +659,56 @@ def _idlefunc ():
 
             counter = 180   #カウンターを最初に戻す
         
-        #4つの方角（北東南西）の処理が終わったときに衝突判定の学習用クラスラベルデータを出力
-        if box_px > box_px_max and box_py > box_py_max and rolling_direc_count == 4:
-            with open("box_collision_class_label.txt","w") as o:
-                for index, v in enumerate(class_label):
-                    if index == len(class_label) - 1:
-                        print(str(v), end="", file=o)
-                    else:
-                        print(str(v) + ",", end="", file=o)
+            #4つの方角（北東南西）の処理が終わったときに衝突判定の学習用クラスラベルデータを出力
+            if box_px > box_px_end and box_pz > box_pz_end and rolling_direc_count == rolling_direc_count_max:
+                with open("box_collision_class_label.txt","w") as o:
+                    for index, v in enumerate(class_label):
+                        if index == len(class_label) - 1:
+                            print(str(v), end="", file=o)
+                        else:
+                            print(str(v) + ",", end="", file=o)
 
-        #一つの方角の探索が終わったとき
-        if box_px > box_px_max and box_py > box_py_max:
-            rolling_direc_count += 1 #rolling_direc_countを次の方角に更新
+            #一つの方角の探索が終わったとき
+            if box_px > box_px_end and box_pz > box_pz_end:
+                rolling_direc_count += 1 #rolling_direc_countを次の方角に更新
 
-            #次の方角の探索の始まりの座標
-            box_px = box_px_min
-            box_py = box_py_min
-            #e
-            if rolling_direc_count == 2:
-                gaze_x = 10 
-                gaze_z = 0 
-                Force_x = 100 
-                Force_z = 0 
-            #s
-            if rolling_direc_count == 3:
-                gaze_x = 0                
-                gaze_z = 10
-                Force_x = 0
-                Force_z = 100
-            #w
-            if rolling_direc_count == 4:
-                gaze_x = -10 
-                gaze_z = 0
-                Force_x = -100 
-                Force_z = 0
+                #次の方角の探索の始まりの座標
+                box_px = box_px_start
+                box_pz = box_pz_start
+                #e
+                if rolling_direc_count == 2:
+                    gaze_x = 10 
+                    gaze_z = 0 
+                    Force_x = 100 
+                    Force_z = 0 
+                #s
+                if rolling_direc_count == 3:
+                    gaze_x = 0                
+                    gaze_z = 10
+                    Force_x = 0
+                    Force_z = 100
+                #w
+                if rolling_direc_count == 4:
+                    gaze_x = -10 
+                    gaze_z = 0
+                    Force_x = -100 
+                    Force_z = 0
 
-        #箱のx方向座標がmaxを超えたとき
-        if box_px > box_px_max:
-            box_px = box_px_min     #箱のx方向座標を折り返し
-            box_py += box_dpy       #箱のy方向座標を更新
+            #箱のx方向座標がmaxを超えたとき
+            if box_px > box_px_end:
+                box_px = box_px_start     #箱のx方向座標を折り返し
+                box_pz += box_dpz       #箱のy方向座標を更新
 
-        #異なる視点の画像を2つの画面に描画する
-        glutSetWindow(subwinnum[0])
-        glutDisplayFunc (_drawfunc0)
-        glutPostRedisplay ()
+        #箱の作成が終わった後で描画するようにする。視点座標に箱の座標を使っているため。
+        if counter > 190:  
+            #異なる視点の画像を2つの画面に描画する
+            glutSetWindow(subwinnum[0])
+            glutDisplayFunc (_drawfunc0)
+            glutPostRedisplay ()
 
-        glutSetWindow(subwinnum[1])
-        glutDisplayFunc (_drawfunc1)
-        glutPostRedisplay ()
+            glutSetWindow(subwinnum[1])
+            glutDisplayFunc (_drawfunc1)
+            glutPostRedisplay ()
 
         ##衝突検出部分を書き換え。#############
         # Simulate
