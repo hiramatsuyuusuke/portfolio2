@@ -16,6 +16,7 @@ from torch import nn
 import torchvision.transforms as transforms
 import torchvision.models as models
 
+
 # geometric utility functions
 def scalp (vec, scal):
     vec[0] *= scal
@@ -77,6 +78,38 @@ def draw_body(body):
         sx,sy,sz = body.boxsize
         glScalef(sx, sy, sz)
         glutSolidCube(1)
+
+    if body.shape=="cylinder":
+        #ODEのcylinder（重心座標）とOpenGLのcylinder（ボトム座標）の座標設定の違いを修整して描画する。
+
+        #シリンダーの外周を作成
+        r,h = body.cylindersize
+        R=[1., 0., 0., 0., 1, 0, 0., 0, 1]#x軸周りに0度回転
+        rot = [R[0], R[3], R[6], 0.,
+            R[1], R[4], R[7], 0.,
+            R[2], R[5], R[8], 0.,
+            0, 0, -h*0.5, 1.0]  #z軸方向に -h*0.5 平行移動
+        glMultMatrixd(rot)
+        quadric = gluNewQuadric()
+        gluQuadricNormals(quadric, GLU_SMOOTH)
+        gluCylinder(quadric, r, r, h, 10, 10)  # Base radius, top radius, height, slices, stacks    
+        gluDeleteQuadric(quadric)
+        
+        #シリンダーの上下2枚のディスクを作成
+        quadric = gluNewQuadric()
+        gluQuadricNormals(quadric, GLU_SMOOTH)
+        gluDisk(quadric, 0, r, 10, 10)  # Inner radius, outer radius, slices, loops
+        rot = [R[0], R[3], R[6], 0.,
+            R[1], R[4], R[7], 0.,
+            R[2], R[5], R[8], 0.,
+            0, 0, h, 1.0]   #z軸方向に h 平行移動
+
+        glMultMatrixd(rot)
+        gluQuadricNormals(quadric, GLU_SMOOTH)
+        gluDisk(quadric, 0, r, 10, 10)  # Inner radius, outer radius, slices, loops
+        gluDeleteQuadric(quadric)
+
+
     glPopMatrix()
 
 
@@ -100,11 +133,29 @@ def create_box(world, space, density, lx, ly, lz):
 
     return body, geom
 
+# create_cylinder
+def create_cylinder(world, space, density, direction, r, h):
+    """Create a cylinder body and its corresponding geom."""
+    # Create body
+    body = ode.Body(world)
+    M = ode.Mass()
+    M.setCylinder(density, direction, r, h)
+    body.setMass(M)
+
+    # Set parameters for drawing the body
+    body.shape = "cylinder"
+    body.cylindersize = (r, h)
+    
+    # Create a box geom for collision detection
+    geom = ode.GeomCylinder(space, r, h)
+    geom.setBody(body)
+    return body, geom 
+
 # drop_object
-def drop_object( lx, ly, lz, px, py, pz):
+def drop_box_robo( lx, ly, lz, px, py, pz):
     """Drop an object into the scene."""
 
-    global bodies, geoms, objcount
+    global bodies_robo, geoms_robo, objcount
 
     body, geom = create_box(world, space, 10, lx, ly, lz)
     body.setPosition( (px, py, pz) )
@@ -112,11 +163,51 @@ def drop_object( lx, ly, lz, px, py, pz):
     ct = cos (theta)
     st = sin (theta)
     body.setRotation([ct, 0., -st, 0., 1., 0., st, 0., ct])
+    bodies_robo.append(body)
+    geoms_robo.append(geom)
+    objcount += 1
+
+# drop_box_object
+def drop_box( lx, ly, lz, px, py, pz, density):
+    """Drop an object into the scene."""
+    global bodies, geoms, objcount
+
+    body, geom = create_box(world, space, density, lx, ly, lz)
+    theta = 0
+    body.setPosition( (px, py, pz) )
+    ct = cos (theta)
+    st = sin (theta)
+    body.setRotation([ct, 0., -st, 0., 1., 0., st, 0., ct])#y軸回転
+    #body.setRotation([1., 0., 0., 0., ct, -st, 0., st, ct])#x軸回転 
+
     bodies.append(body)
     geoms.append(geom)
     objcount += 1
 
+# drop_cylinder_object
+def drop_cylinder( rotation_num, r, h, px, py, pz, density):
+    """Drop an object into the scene."""
+    global bodies, geoms, objcount
 
+    body, geom = create_cylinder(world, space, density, 3, r, h)  #odeとopenglのシリンダーの方向を一致させるために、3(z軸方向)にする。
+    
+    if rotation_num == 1:
+        theta = 3.1415*(0.0/180.0)  #シリンダーの方向はz軸方向
+    if rotation_num == 2:
+        theta = 3.1415*(90.0/180.0) #シリンダーの方向をy軸方向にして、シリンダーを立てる。
+
+    body.setPosition( (px, py, pz) )  
+    ct = cos (theta)
+    st = sin (theta)
+
+    body.setRotation([1., 0., 0., 0., ct, st, 0., -st, ct])#x軸回転
+    #body.setRotation([ct, 0., -st, 0., 1., 0., st, 0., ct])#y軸回転
+    #body.setRotation([ct, st., 0., -st, ct, 0., 0., 0., 1.])#z軸回転
+
+    bodies.append(body)
+    geoms.append(geom)
+
+    objcount += 1
 
 # explosion
 def explosion():
@@ -353,7 +444,7 @@ def draw_tex_polygon():
     glVertex3d(-4.5,  2.0, 4.5)
 
     glEnd()
-    """
+
     #壁　手前
     glBegin(GL_QUADS)
 
@@ -370,7 +461,7 @@ def draw_tex_polygon():
     glVertex3d(4.5,  2.0, 4.5)
 
     glEnd()
-    """
+
     #壁　右
     glBegin(GL_QUADS)
 
@@ -432,10 +523,11 @@ floor = ode.GeomPlane(space, (0,1,0), 0)
 
 # A list with ODE bodies
 bodies = []
+bodies_robo = []
 
 # The geoms for each of the bodies
 geoms = []
-
+geoms_robo = []
 # A joint group for the contact joints that are generated whenever
 # two bodies collide
 contactgroup = ode.JointGroup()
@@ -452,10 +544,10 @@ lasttime = time.time()
 # 箱ロボットの行動を決める値
 judge = 0
 judge_pattern = 2
-gaze_x = 0
-gaze_z = -10
-Force_x = 0
-Force_z = -120
+gaze_x = -10
+gaze_z = 0
+Force_x = -120
+Force_z = 0
 
 #テクスチャ読み込み#
 glutSetWindow(subwinnum[0])
@@ -475,6 +567,52 @@ Learned_model.load_state_dict(torch.load("Weight1.pth", weights_only=True))
 Learned_model.eval()  # 推論モードに切り替え
 
 
+#ベッドの天板
+drop_box(2.2, 0.2, 1.2, 1.0, 0.3, -3.5, 1000)  #(lx, ly, lz, px, py, pz, density)   
+#ベッドの足#####
+drop_cylinder(2, 0.1, 0.2, 0., 0.1, -4., 1000)  #(rotation_num, r, h, px, py, pz, density) 位置座標はボトムではなく重心の座標に変換している。
+drop_cylinder(2, 0.1, 0.2, 2., 0.1, -4., 1000)  #(rotation_num, r, h, px, py, pz, density) 位置座標はボトムではなく重心の座標に変換している。
+drop_cylinder(2, 0.1, 0.2, 2., 0.1, -3., 1000)  #(rotation_num, r, h, px, py, pz, density) 位置座標はボトムではなく重心の座標に変換している。
+drop_cylinder(2, 0.1, 0.2, 0., 0.1, -3., 1000)  #(rotation_num, r, h, px, py, pz, density) 位置座標はボトムではなく重心の座標に変換している。
+
+#扇風機の頭1
+drop_cylinder(1, 0.3, 0.1, 0, 0.7, -0.25 + 2.0, 1000)  #(rotation_num, r, h, px, py, pz, density) 位置座標はボトムではなく重心の座標に変換している。
+#扇風機の頭2
+drop_cylinder(1, 0.1, 0.4, 0, 0.7, 0. + 2.0, 1000)  #(rotation_num, r, h, px, py, pz, density) 位置座標はボトムではなく重心の座標に変換している。
+#扇風機の足1
+drop_cylinder(2, 0.4, 0.1, 0, 0.05, 0. + 2.0, 1000)  #(rotation_num, r, h, px, py, pz, density) 位置座標はボトムではなく重心の座標に変換している。
+#扇風機の足2
+drop_cylinder(2, 0.1, 0.6, 0, 0.3, 0. + 2.0, 1000)  #(rotation_num, r, h, px, py, pz, density) 位置座標はボトムではなく重心の座標に変換している。
+
+#机の天板
+drop_box(1.3, 0.2, 1.7, 3.8, 0.7, 0.825, 1000)  #(lx, ly, lz, px, py, pz, density)
+#机の脚
+drop_box(0.15, 0.6, 0.15, 3.3, 0.3, 0., 1000)  #(lx, ly, lz, px, py, pz, density)  
+drop_box(0.15, 0.6, 0.15, 4.3, 0.3, 0., 1000)  #(lx, ly, lz, px, py, pz, density)  
+#机の引き出し
+drop_box(1.0, 0.6, 0.5, 3.8, 0.3, 1.4, 1000)  #(lx, ly, lz, px, py, pz, density)     
+
+#棚の天板1
+drop_box(1.0, 0.1, 2.0, -3.7, 0.6, 1.0, 1000)  #(lx, ly, lz, px, py, pz, density)  
+#棚の天板2
+drop_box(1.0, 0.1, 2.0, -3.7, 1.0, 1.0, 1000)  #(lx, ly, lz, px, py, pz, density)  
+#棚の脚
+drop_box(0.15, 1., 0.15, -4.2, 0.5, 0., 1000)  #(lx, ly, lz, px, py, pz, density)  
+drop_box(0.15, 1., 0.15, -3.2, 0.5, 0., 1000)  #(lx, ly, lz, px, py, pz, density)  
+drop_box(0.15, 1., 0.15, -3.2, 0.5, 2., 1000)  #(lx, ly, lz, px, py, pz, density)  
+drop_box(0.15, 1., 0.15, -4.2, 0.5, 2., 1000)  #(lx, ly, lz, px, py, pz, density)   
+
+# 固定ジョイントの作成
+fixed_joints=[]
+for i in range(19):
+#for i in range(38):
+    fixed_joints.append(ode.FixedJoint(world))
+
+    fixed_joints[i].attach(bodies[i], None)  # ボディを固定
+    fixed_joints[i].setFixed()
+
+
+
 # keyboard callback
 def _keyfunc (c, x, y):
     sys.exit (0)
@@ -483,7 +621,7 @@ glutKeyboardFunc (_keyfunc)
 
 # draw callback
 def _drawfunc0 ():
-    global bodies
+    global bodies, bodies_robo
     # Draw the scene
     prepare_GL()
 
@@ -491,13 +629,32 @@ def _drawfunc0 ():
     gluLookAt (3.0*2.0, 3.6*2.0, 5.0*1.5, -1.0, -1.0, 0, 0, 1, 0)#（視点位置、注視点位置、姿勢方向）
 
     for index, b in enumerate(bodies):
-        if index == 0:
+        glMaterialfv(GL_FRONT, GL_AMBIENT, [0.3, 0.3, 1, 1.0])  #環境光の影響  
+        glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.3, 0.3, 1, 1.0])     
+        #ベッドのindex
+        if 0 <= index and index <= 4:            
+            glMaterialfv(GL_FRONT, GL_AMBIENT, [0.5, 0.5, 0.5, 1.0])  #環境光の影響  
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.5, 0.5, 0.5, 1.0])
+        #扇風機のindex
+        if 5 <= index and index <= 8:            
+            glMaterialfv(GL_FRONT, GL_AMBIENT, [1.0, 1.0, 1.0, 1.0])  #環境光の影響  
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, [1.0, 1.0, 1.0, 1.0])
+        #机のindex
+        if 9 <= index and index <= 12:            
+            glMaterialfv(GL_FRONT, GL_AMBIENT, [0.4, 0.23, 0.2, 1.0])  #環境光の影響  
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.4, 0.23, 0.2, 1.0])
+        #棚のindex
+        if 13 <= index and index <= 18:            
+            glMaterialfv(GL_FRONT, GL_AMBIENT, [0.2, 0.2, 0.2, 1.0])  #環境光の影響  
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.2, 0.2, 0.2, 1.0])
+        draw_body(b)
+
+    for index, b in enumerate(bodies_robo):
+        if index == 0:             
             glMaterialfv(GL_FRONT, GL_AMBIENT, [0.5, 1, 0.5, 0.5])  #環境光の影響  
             glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.5, 1, 0.5, 0.1])
-        if index == 1:                 
-            glMaterialfv(GL_FRONT, GL_AMBIENT, [0.3, 0.3, 1, 1.0])  #環境光の影響  
-            glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.3, 0.3, 1, 1.0])
         draw_body(b)
+
 
     draw_tex_polygon()
 
@@ -505,28 +662,42 @@ def _drawfunc0 ():
 
 def _drawfunc1 ():
     global bodies, objcount, gaze_x, gaze_z
+    global bodies_robo
     # Draw the scene
     prepare_GL()
     
     x,y,z = 0,0,0
     if objcount >= 1:
-        x,y,z = bodies[0].getPosition()
+        x,y,z = bodies_robo[0].getPosition()#箱ロボットの座標
+
     #箱ロボットの視点
     gluLookAt ( x, y, z, x + gaze_x, 0.1, z + gaze_z, 0, 1, 0)#（視点位置、注視点位置、姿勢方向）
 
-
     for index, b in enumerate(bodies):
-        if index == 1:                 
-            glMaterialfv(GL_FRONT, GL_AMBIENT, [0.3, 0.3, 1, 1.0])  #環境光の影響  
-            glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.3, 0.3, 1, 1.0])
+        glMaterialfv(GL_FRONT, GL_AMBIENT, [0.3, 0.3, 1, 1.0])  #環境光の影響  
+        glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.3, 0.3, 1, 1.0])     
+        #ベッドのindex
+        if 0 <= index and index <= 4:            
+            glMaterialfv(GL_FRONT, GL_AMBIENT, [0.5, 0.5, 0.5, 1.0])  #環境光の影響  
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.5, 0.5, 0.5, 1.0])
+        #扇風機のindex
+        if 5 <= index and index <= 8:            
+            glMaterialfv(GL_FRONT, GL_AMBIENT, [1.0, 1.0, 1.0, 1.0])  #環境光の影響  
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, [1.0, 1.0, 1.0, 1.0])
+        #机のindex
+        if 9 <= index and index <= 12:            
+            glMaterialfv(GL_FRONT, GL_AMBIENT, [0.4, 0.23, 0.2, 1.0])  #環境光の影響  
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.4, 0.23, 0.2, 1.0])
+        #棚のindex
+        if 13 <= index and index <= 18:            
+            glMaterialfv(GL_FRONT, GL_AMBIENT, [0.2, 0.2, 0.2, 1.0])  #環境光の影響  
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.2, 0.2, 0.2, 1.0])
 
-        if index >= 1:           
-            draw_body(b)
+        draw_body(b)
 
     draw_tex_polygon()
 
     glutSwapBuffers ()
-
 #glutDisplayFunc (_drawfunc)
 
 
@@ -536,6 +707,7 @@ def _idlefunc ():
     global counter, lasttime
     global judge, judge_pattern, gaze_x, gaze_z, Force_x, Force_z
     global bodies, geoms, subwinnum, world,contactgroup
+    global bodies_robo, geoms_robo
 
     t = dt - (time.time() - lasttime)
     if (t > 0):
@@ -543,61 +715,34 @@ def _idlefunc ():
 
     counter += 1
     if counter==30:       
-        drop_object(0.3, 0.3, 0.3,
-                     0.0, 3.0, 0.0)  #(lx, ly, lz, px, py, pz)
+        drop_box_robo(0.3, 0.3, 0.3,
+                     2.0, 0.2, 2.0)  #(lx, ly, lz, px, py, pz)
         
-        """       
-        drop_object(0.3, 1.0, 6.0,
-                     2.0, 3.0, 1.49)  #(lx, ly, lz, px, py, pz)       
-        drop_object(0.3, 1.0, 6.0,
-                     -2.0, 3.0, -1.49)  #(lx, ly, lz, px, py, pz)   
-        """        
-        
-        drop_object(2.0, 1.0, 0.3,
-                     0.0, 3.0, -2.0)  #(lx, ly, lz, px, py, pz)             
-        drop_object(0.3, 1.0, 2.0,
-                     1.2, 3.0, -1.15)  #(lx, ly, lz, px, py, pz)                
-        drop_object(0.3, 1.0, 2.0,
-                     -1.2, 3.0, -1.15)  #(lx, ly, lz, px, py, pz) 
-        
-        drop_object(2.0, 1.0, 0.3,
-                     0.0, 3.0, 2.5)  #(lx, ly, lz, px, py, pz)  
-        drop_object(0.3, 1.0, 2.0,
-                     2.0, 3.0, 1.55)  #(lx, ly, lz, px, py, pz)  
-        drop_object(0.3, 1.0, 2.0,
-                     -2.0, 3.0, 1.55)  #(lx, ly, lz, px, py, pz)  
-
-        drop_object(0.3, 1.0, 1.0,
-                     0.0, 3.0, 4.0)  #(lx, ly, lz, px, py, pz)     
-        drop_object(0.3, 1.0, 1.0,
-                     1.2, 3.0, -4.0)  #(lx, ly, lz, px, py, pz)             
-
-
     if counter==200:     
         judge = display_image_recognition()
         if judge == 0:
-            bodies[0].addForce(( Force_x, 0, Force_z))
+            bodies_robo[0].addForce(( Force_x, 0, Force_z))
 
         if judge == 1:
             judge_pattern += 1
             #judge_pattern = random.randint(1, 4)
 
-            if judge_pattern== 1:
+            if judge_pattern== 4:
                 Force_x = 120
                 gaze_x = 10
                 Force_z = 0
                 gaze_z = 0
-            if judge_pattern== 2:
+            if judge_pattern== 3:
                 Force_x = 0
                 gaze_x = 0
                 Force_z = -120
                 gaze_z = -10
-            if judge_pattern== 3:
+            if judge_pattern== 2:
                 Force_x = -120
                 gaze_x = -10
                 Force_z = 0
                 gaze_z = 0                
-            if judge_pattern== 4:
+            if judge_pattern== 1:
                 Force_x = 0
                 gaze_x = 0
                 Force_z = 120
@@ -609,30 +754,32 @@ def _idlefunc ():
         #カウンターをオブジェクト作成後に戻す
         counter = 160
   
-    #異なる視点の画像を2つの画面に描画する
-    glutSetWindow(subwinnum[0])
-    glutDisplayFunc (_drawfunc0)
-    glutPostRedisplay ()
+    if counter > 30:    
+        #異なる視点の画像を2つの画面に描画する
+        glutSetWindow(subwinnum[0])
+        glutDisplayFunc (_drawfunc0)
+        glutPostRedisplay ()
 
-    glutSetWindow(subwinnum[1])
-    glutDisplayFunc (_drawfunc1)
-    glutPostRedisplay ()
+        glutSetWindow(subwinnum[1])
+        glutDisplayFunc (_drawfunc1)
+        glutPostRedisplay ()
 
 
      ##衝突検出部分を書き換え。#############
     # Simulate
     n = 4
     for i in range(n):
-        for g1 in geoms:    
+        for g1 in geoms_robo:    
             for g2 in geoms:
-    
-                near_callback((world,contactgroup), g1, g2)
+                near_callback((world,contactgroup), g1, g2) #障害物と箱ロボットの衝突
 
+        for g1 in geoms_robo:
+            near_callback((world,contactgroup), g1, floor)  #床と箱ロボットの衝突
         for g1 in geoms:
-            near_callback((world,contactgroup), g1, floor)
+            near_callback((world,contactgroup), g1, floor) #床と障害物の衝突
 
         #space.collide((world,contactgroup), ode.collide_callback(g1, floor))
-         # Simulation step
+        # Simulation step
         world.step(dt/n)
         # Remove all contact joints
         contactgroup.empty()
