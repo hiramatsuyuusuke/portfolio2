@@ -132,7 +132,13 @@ for i in range(1):
 
     #予測値を求める
     _,predicted = torch.max(outputs.data,1)
-
+    """
+    for index_p,value_p in enumerate(predicted):
+      if value_p != labels[index_p]:
+        print("j" + str(j))          
+        print("predicted:" + str(predicted))
+        print("labels:" + str(labels))
+    """
     #精度を計算する
     correct += (predicted == labels).sum()
     total += batch_size

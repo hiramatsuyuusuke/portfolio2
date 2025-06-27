@@ -1,5 +1,5 @@
 #ODE0.16.4付属のtutorial3.pyを変更して作成したソースコードです
-#3D空間で箱と障害物の衝突を検証して、箱視点の学習用画像と学習用クラスラベルを作成します
+#3D空間で学習用画像と学習用クラスラベルを作成します
 
 import sys, time
 from math import *
@@ -12,16 +12,10 @@ import ode
 from PIL import Image
 from PIL import ImageOps
 
-import copy
+import numpy as np
 
-# geometric utility functions
-def scalp (vec, scal):
-    vec[0] *= scal
-    vec[1] *= scal
-    vec[2] *= scal
+import box_robo_functions
 
-def length (vec):
-    return sqrt (vec[0]**2 + vec[1]**2 + vec[2]**2)
 
 # prepare_GL
 def prepare_GL():
@@ -58,95 +52,64 @@ def prepare_GL():
     # View transformation
     #gluLookAt (2.4, 3.6, 4.8, 0.5, 0.5, 0, 0, 1, 0)    #視点変換をコメントアウト
 
-# draw_body
-def draw_body(body):
-    """Draw an ODE body.
-    """
-
-    x,y,z = body.getPosition()
-    R = body.getRotation()
-    rot = [R[0], R[3], R[6], 0.,
-           R[1], R[4], R[7], 0.,
-           R[2], R[5], R[8], 0.,
-           x, y, z, 1.0]
-    glPushMatrix()
-    glMultMatrixd(rot)
-    if body.shape=="box":
-        sx,sy,sz = body.boxsize
-        glScalef(sx, sy, sz)
-        glutSolidCube(1)
-    glPopMatrix()
-
-
-# create_box
-def create_box(world, space, density, lx, ly, lz):
-    """Create a box body and its corresponding geom."""
-
-    # Create body
-    body = ode.Body(world)
-    M = ode.Mass()
-    M.setBox(density, lx, ly, lz)
-    body.setMass(M)
-
-    # Set parameters for drawing the body
-    body.shape = "box"
-    body.boxsize = (lx, ly, lz)
-
-    # Create a box geom for collision detection
-    geom = ode.GeomBox(space, lengths=body.boxsize)
-    geom.setBody(body)
-
-    return body, geom
-
-# drop_object
-def drop_object( lx, ly, lz, px, py, pz, density):
+# drop_box_robo_object
+def drop_box_robo( lx, ly, lz, px, py, pz, density):
     """Drop an object into the scene."""
+    global bodies_robo, geoms_robo, objcount
 
-    global bodies, geoms, objcount
-
-    body, geom = create_box(world, space, density, lx, ly, lz)
-    body.setPosition( (px, py, pz) )
+    body, geom = box_robo_functions.create_box(world, space, density, lx, ly, lz)
     theta = 0
+    body.setPosition( (px, py, pz) )
     ct = cos (theta)
     st = sin (theta)
-    body.setRotation([ct, 0., -st, 0., 1., 0., st, 0., ct])
+    body.setRotation([ct, 0., -st, 0., 1., 0., st, 0., ct])#y軸回転
+    #body.setRotation([1., 0., 0., 0., ct, -st, 0., st, ct])#x軸回転 
+
+    bodies_robo.append(body)
+    geoms_robo.append(geom)
+    objcount += 1
+
+# drop_box_object
+def drop_box( lx, ly, lz, px, py, pz, density):
+    """Drop an object into the scene."""
+    global bodies, geoms, objcount
+
+    body, geom = box_robo_functions.create_box(world, space, density, lx, ly, lz)
+    theta = 0
+    body.setPosition( (px, py, pz) )
+    ct = cos (theta)
+    st = sin (theta)
+    body.setRotation([ct, 0., -st, 0., 1., 0., st, 0., ct])#y軸回転
+    #body.setRotation([1., 0., 0., 0., ct, -st, 0., st, ct])#x軸回転 
+
     bodies.append(body)
     geoms.append(geom)
     objcount += 1
 
-# explosion
-def explosion():
-    """Simulate an explosion.
+# drop_cylinder_object
+def drop_cylinder( rotation_num, r, h, px, py, pz, density):
+    """Drop an object into the scene."""
+    global bodies, geoms, objcount
 
-    Every object is pushed away from the origin.
-    The force is dependent on the objects distance from the origin.
-    """
-    global bodies
+    body, geom = box_robo_functions. create_cylinder(world, space, density, 3, r, h)  #odeとopenglのシリンダーの方向を一致させるために、3(z軸方向)にする。
+    
+    if rotation_num == 1:
+        theta = 3.1415*(0.0/180.0)  #シリンダーの方向はz軸方向
+    if rotation_num == 2:
+        theta = 3.1415*(90.0/180.0) #シリンダーの方向をy軸方向にして、シリンダーを立てる。
 
-    for b in bodies:
-        l=b.getPosition ()
-        d = length (l)
-        a = max(0, 40000*(1.0-0.2*d*d))
-        l = [l[0] / 4, l[1], l[2] /4]
-        scalp (l, a / length (l))
-        b.addForce(l)
+    body.setPosition( (px, py, pz) )  
+    ct = cos (theta)
+    st = sin (theta)
 
-# pull
-def pull():
-    """Pull the objects back to the origin.
+    body.setRotation([1., 0., 0., 0., ct, st, 0., -st, ct])#x軸回転
+    #body.setRotation([ct, 0., -st, 0., 1., 0., st, 0., ct])#y軸回転
+    #body.setRotation([ct, st., 0., -st, ct, 0., 0., 0., 1.])#z軸回転
 
-    Every object will be pulled back to the origin.
-    Every couple of frames there'll be a thrust upwards so that
-    the objects won't stick to the ground all the time.
-    """
-    global bodies, counter
+    bodies.append(body)
+    geoms.append(geom)
 
-    for b in bodies:
-        l=list (b.getPosition ())
-        scalp (l, -1000 / length (l))
-        b.addForce(l)
-        if counter%60==0:
-            b.addForce((0,10000,0))
+    objcount += 1
 
 # Collision callback
 def near_callback(args, geom1, geom2):
@@ -162,7 +125,7 @@ def near_callback(args, geom1, geom2):
     # Create contact joints
     world,contactgroup = args
     for c in contacts:
-        c.setBounce(0.01)
+        c.setBounce(0)
         c.setMu(5000)
         j = ode.ContactJoint(world, contactgroup, c)
         j.attach(geom1.getBody(), geom2.getBody())
@@ -246,125 +209,6 @@ def capture2():
 
     return resized_image
 
-#テクスチャ読み込み関数
-def load_texture(texture_file_name):
-
-    # Generate a texture ID
-    texture_id = glGenTextures(1)
-    glBindTexture(GL_TEXTURE_2D, texture_id )
-
-    img = Image.open(texture_file_name)
-    w, h = img.size
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, img.tobytes())
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)    # Set texture parameters
-    glBindTexture(GL_TEXTURE_2D, 0)  # Unbind texture
-
-    return texture_id
-
-#テクスチャポリゴン
-def draw_tex_polygon():
-
-    glMaterialfv(GL_FRONT, GL_AMBIENT, [0.5, 0.5, 0.5, 0.5])  #環境光の影響  
-    glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.8, 0.8, 0.8, 1.0])#地の色の設定
-
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)#テクスチャの色と地の色の混ざり方の設定
-    glEnable(GL_BLEND)
-    glEnable(GL_TEXTURE_2D)
-    glNormal3f(0, 1, 0)     #glNormal3f()は非推奨の関数らしい
-
-    #床
-    glBindTexture(GL_TEXTURE_2D, tex_floor)
-    glBegin(GL_QUADS)
-
-    glTexCoord2d(4.5, 0.0)
-    glVertex3d(4.5, -0.01, -4.5)
-
-    glTexCoord2d(0.0, 0.0)
-    glVertex3d( -4.5, -0.01, -4.5)
-
-    glTexCoord2d(0.0, 4.5)
-    glVertex3d( -4.5, -0.01, 4.5)
-
-    glTexCoord2d(4.5, 4.5)
-    glVertex3d(4.5, -0.01, 4.5)
-
-    glEnd()
-
-    #壁　奥
-    glBindTexture(GL_TEXTURE_2D, tex_wall)
-    glBegin(GL_QUADS)
-
-    glTexCoord2d(1.0, 0.0)
-    glVertex3d(4.5,  0.0, -4.5)
-
-    glTexCoord2d(0.0, 0.0)
-    glVertex3d( -4.5, 0.0, -4.5)
-
-    glTexCoord2d(0.0, 1.0)
-    glVertex3d( -4.5, 2.0, -4.5)
-
-    glTexCoord2d(1.0, 1.0)
-    glVertex3d(4.5,  2.0, -4.5)
-
-    glEnd()
-
-    #壁　左
-    glBegin(GL_QUADS)
-
-    glTexCoord2d(1.0, 0.0)
-    glVertex3d(-4.5, 0.0, 4.5)
-
-    glTexCoord2d(0.0, 0.0)
-    glVertex3d( -4.5, 0.0, -4.5)
-
-    glTexCoord2d(0.0, 1.0)
-    glVertex3d( -4.5, 2.0, -4.5)
-
-    glTexCoord2d(1.0, 1.0)
-    glVertex3d(-4.5,  2.0, 4.5)
-
-    glEnd()
-    
-    #壁　手前
-    glBegin(GL_QUADS)
-
-    glTexCoord2d(1.0, 0.0)
-    glVertex3d(4.5,  0.0, 4.5)
-
-    glTexCoord2d(0.0, 0.0)
-    glVertex3d( -4.5, 0.0, 4.5)
-
-    glTexCoord2d(0.0, 1.0)
-    glVertex3d( -4.5, 2.0, 4.5)
-
-    glTexCoord2d(1.0, 1.0)
-    glVertex3d(4.5,  2.0, 4.5)
-
-    glEnd()
-    
-    #壁　右
-    glBegin(GL_QUADS)
-
-    glTexCoord2d(1.0, 0.0)
-    glVertex3d(4.5, 0.0, 4.5)
-
-    glTexCoord2d(0.0, 0.0)
-    glVertex3d(4.5, 0.0, -4.5)
-
-    glTexCoord2d(0.0, 1.0)
-    glVertex3d(4.5, 2.0, -4.5)
-
-    glTexCoord2d(1.0, 1.0)
-    glVertex3d(4.5, 2.0, 4.5)
-
-    glEnd()
-
-    glDisable(GL_TEXTURE_2D)
-
-    glDisable(GL_BLEND)
-
-    glFlush()#??#
-
 ######################################################################
 
 # Initialize Glut
@@ -381,10 +225,14 @@ glutInitWindowPosition (x, y);
 glutInitWindowSize (width, height);
 winnum = glutCreateWindow (b"testode")   #bを追加してbyte列にする。#
 glutDisplayFunc(draw1)
+
 subwinnum = []
+#俯瞰図用のサブウィンドウの作成
 glutInitWindowSize ( 320, 320);
 subwinnum.append(glutCreateSubWindow(winnum, 10, 10, 320, 320))
 glutDisplayFunc(draw2)
+
+#箱ロボットの視界用のサブウィンドウの作成
 glutInitWindowSize ( 320, 320);
 subwinnum.append(glutCreateSubWindow(winnum, 340, 10, 320, 320))
 glutDisplayFunc(draw3)
@@ -403,9 +251,11 @@ floor = ode.GeomPlane(space, (0,1,0), 0)
 
 # A list with ODE bodies
 bodies = []
+bodies_robo = []
 
 # The geoms for each of the bodies
 geoms = []
+geoms_robo = []
 
 # A joint group for the contact joints that are generated whenever
 # two bodies collide
@@ -420,40 +270,28 @@ counter = 0
 objcount = 0
 lasttime = time.time()
 
-#n
+#counterイベント時間の設定
+timing_update_position_and_clear_box = 100
+timing_create_box = 102
+timing_judge1 = 107         #無効座標の判定。#timing_create_boxとtiming_judge1の間は、3カウント以上開ける。
+timing_img_capture = 109    #箱ロボットの視界をキャプチャ。
+timing_rolling_box = 111
+timing_judge2 = 131         #分類ラベルを判定。
+
+#箱ロボットと障害物の衝突判定用フラグ
+global_robo_obstacle_collision_flag = 0 
+
+#北=1
 gaze_x = 0 #視線方向の初期値をセット
 gaze_z = -10 #視線方向の初期値をセット
 Force_x = 0 #箱を押す力の方向の初期値をセット
-Force_z = -100  #箱を押す力の方向の初期値をセット
-"""
-#e
-gaze_x = 10 
-gaze_z = 0 
-Force_x = 100 
-Force_z = 0 
+Force_z = -120  #箱を押す力の方向の初期値をセット
 
-#s
-gaze_x = 0                
-gaze_z = 10
-Force_x = 0
-Force_z = 100
-
-#w
-gaze_x = -10 
-gaze_z = 0
-Force_x = -100 
-Force_z = 0
-"""
-
-capimgnum = 0
+#箱を転がす方角のカウント。
+rolling_direc_count = 0   #無効座標の取得=0、北=1、東=2、南=3、西=4
 rolling_direc_count_max = 4
 
-rolling_direc_count = 0   #箱を転がす方角のカウント。北=1、東=2、南=3、西=4
-ops0=[]  #箱が作成される前の障害物の座標。
-ops1=[]  #箱が転がる前の障害物の座標。箱と障害物が重なっていれば、障害物が移動する。
-ops2=[]  #箱が転がった後の障害物の座標。箱と障害物が衝突すれば、障害物が移動する。
-class_label = []  #学習用のクラスラベル
-
+#箱ロボットの座標設定
 box_px_start = -4.0
 box_pz_start = -4.0
 box_px_end = 4.0
@@ -463,15 +301,46 @@ box_pz = box_pz_start  #箱のy座標の初期値をセット
 box_dpx = 0.25  #箱のx座標の探索の刻み幅
 box_dpz = 0.25  #箱のy座標の探索の刻み幅
 
+#箱ロボットの座標マトリックス設定
+ipmx = 0#無効座標ファイル作成用
+ipmz = 0#無効座標ファイル作成用
+ipms = int((abs(box_px_start)*2) / box_dpx) + 1 #無効座標マトリックスのサイズ
+
+if rolling_direc_count == 0:
+    # ゼロ埋め2D配列を作成
+    invalid_position_matrix = [[0 for _ in range(ipms)] for _ in range(ipms)]#無効座標ファイル作成用
+
+if rolling_direc_count != 0:
+    # Read lines from a file
+    with open('invalid_position_matrix.txt', 'r') as file:
+        lines = file.readlines()
+    # Convert lines to a 2D NumPy array (assuming space-separated values)
+    invalid_position_matrix = np.array([list(map(int, line.strip().split(","))) for line in lines])
+
+# 配列の省略表示を無効化
+#np.set_printoptions(threshold=np.inf)
+#print(invalid_position_matrix)
+
+#学習用のクラスラベル
+class_label = []  
 
 #テクスチャ読み込み#
 glutSetWindow(subwinnum[0])
-tex_floor = load_texture("sample1.png")
-tex_wall = load_texture("sample2.png")
+tex_floor = box_robo_functions.load_texture("sample1.png")
+tex_wall = box_robo_functions.load_texture("sample2.png")
 glutSetWindow(subwinnum[1])
-tex_floor = load_texture("sample1.png")
-tex_wall = load_texture("sample2.png")
+tex_floor = box_robo_functions.load_texture("sample1.png")
+tex_wall = box_robo_functions.load_texture("sample2.png")
 
+#障害物の作成
+box_robo_functions.room3_1(drop_box, drop_cylinder)
+
+# 障害物用の固定ジョイントの作成
+fixed_joints=[]
+for i in range(19):
+    fixed_joints.append(ode.FixedJoint(world))
+    fixed_joints[i].attach(bodies[i], None)  # ボディを固定
+    fixed_joints[i].setFixed()
 
 # keyboard callback
 def _keyfunc (c, x, y):
@@ -481,7 +350,7 @@ glutKeyboardFunc (_keyfunc)
 
 # draw callback
 def _drawfunc0 ():
-    global bodies
+    global bodies, bodies_robo
     # Draw the scene
     prepare_GL()
 
@@ -489,40 +358,73 @@ def _drawfunc0 ():
     gluLookAt (3.0*2.0, 3.6*2.0, 5.0*1.5, -1.0, -1.0, 0, 0, 1, 0)#（視点位置、注視点位置、姿勢方向）
 
     for index, b in enumerate(bodies):
-        if index == len(bodies)-1:
+        glMaterialfv(GL_FRONT, GL_AMBIENT, [0.3, 0.3, 1, 1.0])  #環境光の影響  
+        glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.3, 0.3, 1, 1.0])     
+        #ベッドのindex
+        if 0 <= index and index <= 4:            
+            glMaterialfv(GL_FRONT, GL_AMBIENT, [0.5, 0.5, 0.5, 1.0])  #環境光の影響  
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.5, 0.5, 0.5, 1.0])
+        #扇風機のindex
+        if 5 <= index and index <= 8:            
+            glMaterialfv(GL_FRONT, GL_AMBIENT, [1.0, 1.0, 1.0, 1.0])  #環境光の影響  
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, [1.0, 1.0, 1.0, 1.0])
+        #机のindex
+        if 9 <= index and index <= 12:            
+            glMaterialfv(GL_FRONT, GL_AMBIENT, [0.4, 0.23, 0.2, 1.0])  #環境光の影響  
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.4, 0.23, 0.2, 1.0])
+        #棚のindex
+        if 13 <= index and index <= 18:            
+            glMaterialfv(GL_FRONT, GL_AMBIENT, [0.2, 0.2, 0.2, 1.0])  #環境光の影響  
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.2, 0.2, 0.2, 1.0])
+        box_robo_functions.draw_body(b)
+
+    for index, b in enumerate(bodies_robo):
+        if index == 0:             
             glMaterialfv(GL_FRONT, GL_AMBIENT, [0.5, 1, 0.5, 0.5])  #環境光の影響  
             glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.5, 1, 0.5, 0.1])
+        box_robo_functions.draw_body(b)
 
-        if index == 0:                 
-            glMaterialfv(GL_FRONT, GL_AMBIENT, [0.3, 0.3, 1, 1.0])  #環境光の影響  
-            glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.3, 0.3, 1, 1.0])
-        draw_body(b)
 
-    draw_tex_polygon()
+    box_robo_functions.draw_tex_polygon(tex_floor, tex_wall)
 
     glutSwapBuffers ()
 
 def _drawfunc1 ():
     global bodies, objcount, gaze_x, gaze_z
+    global bodies_robo
     # Draw the scene
     prepare_GL()
     
     x,y,z = 0,0,0
     if objcount >= 1:
-        x,y,z = bodies[len(bodies)-1].getPosition()
+        x,y,z = bodies_robo[0].getPosition()#箱ロボットの座標
 
     #箱ロボットの視点
     gluLookAt ( x, y, z, x + gaze_x, 0.1, z + gaze_z, 0, 1, 0)#（視点位置、注視点位置、姿勢方向）
 
     for index, b in enumerate(bodies):
-        if index == 0:                 
-            glMaterialfv(GL_FRONT, GL_AMBIENT, [0.3, 0.3, 1, 1.0])  #環境光の影響  
-            glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.3, 0.3, 1, 1.0])
+        glMaterialfv(GL_FRONT, GL_AMBIENT, [0.3, 0.3, 1, 1.0])  #環境光の影響  
+        glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.3, 0.3, 1, 1.0])     
+        #ベッドのindex
+        if 0 <= index and index <= 4:            
+            glMaterialfv(GL_FRONT, GL_AMBIENT, [0.5, 0.5, 0.5, 1.0])  #環境光の影響  
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.5, 0.5, 0.5, 1.0])
+        #扇風機のindex
+        if 5 <= index and index <= 8:            
+            glMaterialfv(GL_FRONT, GL_AMBIENT, [1.0, 1.0, 1.0, 1.0])  #環境光の影響  
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, [1.0, 1.0, 1.0, 1.0])
+        #机のindex
+        if 9 <= index and index <= 12:            
+            glMaterialfv(GL_FRONT, GL_AMBIENT, [0.4, 0.23, 0.2, 1.0])  #環境光の影響  
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.4, 0.23, 0.2, 1.0])
+        #棚のindex
+        if 13 <= index and index <= 18:            
+            glMaterialfv(GL_FRONT, GL_AMBIENT, [0.2, 0.2, 0.2, 1.0])  #環境光の影響  
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.2, 0.2, 0.2, 1.0])
 
-        if index < len(bodies)-1:           
-            draw_body(b)
+        box_robo_functions.draw_body(b)
 
-    draw_tex_polygon()
+    box_robo_functions.draw_tex_polygon(tex_floor, tex_wall)
 
     glutSwapBuffers ()
 
@@ -530,177 +432,138 @@ def _drawfunc1 ():
 
 # idle callback
 def _idlefunc ():
+    global world, contactgroup
     global counter, lasttime
+    global bodies, geoms, bodies_robo, geoms_robo
     global gaze_x, gaze_z, Force_x, Force_z
-    global bodies, geoms, subwinnum, world,contactgroup
-    global rolling_direc_count, ops0, ops1, ops2, class_label
+    global rolling_direc_count, rolling_direc_count_max
     global box_px, box_pz, box_dpx, box_dpz, box_px_start, box_pz_start, box_px_end, box_pz_end
-
+    global class_label, invalid_position_matrix, ipmx, ipmz
+    global timing_update_position_and_clear_box, timing_create_box, timing_judge1, timing_img_capture, timing_rolling_box, timing_judge2
+    global global_robo_obstacle_collision_flag
+    global subwinnum
     #t = dt - (time.time() - lasttime)
     #if (t > 0):
         #time.sleep(t)
 
     if rolling_direc_count <= rolling_direc_count_max:#探索する方角の回数が4以下のとき。北東南西の４回。
         counter += 1
-        if counter==181:  
 
+        #座標の更新
+        if counter == timing_update_position_and_clear_box:
             box_px += box_dpx  #箱のx座標を更新
-
-            bodies.clear()
-            geoms.clear()
-            ops1.clear()  #箱が転がる前の障害物の座標。箱と障害物が重なっていれば、障害物が移動する。
-            ops2.clear()  #箱が転がった後の障害物の座標。箱と障害物が衝突すれば、障害物が移動する。
-
-            #room1
-            drop_object(0.3, 1.0, 6.0,
-                        2.0, 0.51, 1.49, 1e-6)  #(lx, ly, lz, px, py, pz, density)       
-            drop_object(0.3, 1.0, 6.0,
-                        -2.0, 0.51, -1.49, 1e-6)  #(lx, ly, lz, px, py, pz, density)   
-        
-            #外周
-            drop_object(0.3, 1.0, 8.99,
-                        -4.651, 0.51, 0.001, 1e-6)  #(lx, ly, lz, px, py, pz, density)  
-            drop_object(0.3, 1.0, 8.99,
-                        4.651, 0.51, 0.001, 1e-6)  #(lx, ly, lz, px, py, pz, density)             
-            drop_object(8.99, 1.0, 0.3,
-                        0.001, 0.51, 4.651, 1e-6)  #(lx, ly, lz, px, py, pz, density)        
-            drop_object(8.99, 1.0, 0.3,
-                        0.001, 0.51, -4.651, 1e-6)  #(lx, ly, lz, px, py, pz, density)  
-         
-            """        
-            #room2
-            drop_object(2.0, 1.0, 0.3,
-                        0.0, 3.0, -2.0, 1e-5)  #(lx, ly, lz, px, py, pz, density)             
-            drop_object(0.3, 1.0, 2.0,
-                        1.2, 3.0, -1.15, 1e-5)  #(lx, ly, lz, px, py, pz, density)                
-            drop_object(0.3, 1.0, 2.0,
-                        -1.2, 3.0, -1.15, 1e-5)  #(lx, ly, lz, px, py, pz, density) 
-            
-            drop_object(2.0, 1.0, 0.3,
-                        0.0, 3.0, 2.5, 1e-5)  #(lx, ly, lz, px, py, pz, density)  
-            drop_object(0.3, 1.0, 2.0,
-                        2.0, 3.0, 1.55, 1e-5)  #(lx, ly, lz, px, py, pz, density)  
-            drop_object(0.3, 1.0, 2.0,
-                        -2.0, 3.0, 1.55, 1e-5)  #(lx, ly, lz, px, py, pz, density)  
-
-            drop_object(0.3, 1.0, 1.0,
-                        0.0, 3.0, 4.0, 1e-5)  #(lx, ly, lz, px, py, pz, density)     
-            drop_object(0.3, 1.0, 1.0,
-                        1.2, 3.0, -4.0, 1e-5)  #(lx, ly, lz, px, py, pz, density)             
-            """  
- 
-                    
-        #転がる前の箱と障害物が重なっていないかを判定。オブジェクトを落下させているので、counterを少し遅らせる。
-        if counter==190:     
-
-            #始めの一回だけ、箱ロボットと障害物が重なっていない状態の座標を保持。探索の最初に箱と障害物が重なっていないことが必要。
-            if rolling_direc_count == 0:
-                rolling_direc_count = 1
-                #rolling_direc_count = rolling_direc_count_max
-                ##始めの一回だけ、箱が作成される前の障害物の座標を取得
-                for index, b in enumerate(bodies):
-                    if index < len(bodies):
-                        ops0.append(b.getPosition ())
-            #西=4
-            if rolling_direc_count == 4:
-                #箱ロボットを最後に作成する
-                drop_object(0.3, 0.3, 0.3,
-                            -box_px, 0.16, box_pz, 10.0)  #(lx, ly, lz, px, py, pz, density)                           
-            #東=2
-            if rolling_direc_count == 2:
-                #箱ロボットを最後に作成する
-                drop_object(0.3, 0.3, 0.3,
-                            box_px, 0.16, box_pz, 10.0)  #(lx, ly, lz, px, py, pz, density)
-            #北=1
-            if rolling_direc_count == 1:
-                #箱ロボットを最後に作成する
-                drop_object(0.3, 0.3, 0.3,
-                            box_pz, 0.16, -box_px, 10.0)  #(lx, ly, lz, px, py, pz, density)   
-            #南=3              
-            if rolling_direc_count == 3:
-                #箱ロボットを最後に作成する
-                drop_object(0.3, 0.3, 0.3,
-                            box_pz, 0.16, box_px, 10.0)  #(lx, ly, lz, px, py, pz, density)   
-
-        if counter==200:    
-            #障害物の座標を取得
-            for index, b in enumerate(bodies):
-                if index < len(bodies)-1:
-                    ops1.append(b.getPosition ())
-            #最初に箱と障害物が重なっているとき（障害物が移動するので、座標が変化している）
-            if ops0 != ops1:
-                print(2)
-                counter = 180   #カウンターを最初に戻す。画像のキャプチャとラベルの取得は行わない。
-
-        #学習用の画像のキャプチャ
-        if counter==201:
-            capture2().save( "img/test" + str(capimgnum + len(class_label)) + ".jpg")  # 縮小した画像を保存
-
-        #箱を転がす 
-        if counter==202:     
-            bodies[len(bodies)-1].addForce(( Force_x, 0, Force_z))
-        if counter==210:     
-            bodies[len(bodies)-1].addForce(( Force_x, 0, Force_z))       
-
-        #衝突するか衝突しないかの学習用クラスラベルデータの取得
-        if counter==240:   
-            #現在の障害物の座標を取得
-            for index, b in enumerate(bodies):
-                if index < len(bodies)-1:
-                    ops2.append(b.getPosition ())
-
-            #衝突するか衝突しないかの学習用クラスラベルを取得          
-            if ops0 == ops2:
-                print(0)
-                class_label.append(0)
-            else:
-                print(1)
-                class_label.append(1)
-
-            counter = 180   #カウンターを最初に戻す
-        
-            #4つの方角（北東南西）の処理が終わったときに衝突判定の学習用クラスラベルデータを出力
-            if box_px > box_px_end and box_pz > box_pz_end and rolling_direc_count == rolling_direc_count_max:
-                with open("box_collision_class_label.txt","w") as o:
-                    for index, v in enumerate(class_label):
-                        if index == len(class_label) - 1:
-                            print(str(v), end="", file=o)
-                        else:
-                            print(str(v) + ",", end="", file=o)
-
-            #一つの方角の探索が終わったとき
-            if box_px > box_px_end and box_pz > box_pz_end:
-                rolling_direc_count += 1 #rolling_direc_countを次の方角に更新
-
-                #次の方角の探索の始まりの座標
-                box_px = box_px_start
-                box_pz = box_pz_start
-                #e
-                if rolling_direc_count == 2:
-                    gaze_x = 10 
-                    gaze_z = 0 
-                    Force_x = 100 
-                    Force_z = 0 
-                #s
-                if rolling_direc_count == 3:
-                    gaze_x = 0                
-                    gaze_z = 10
-                    Force_x = 0
-                    Force_z = 100
-                #w
-                if rolling_direc_count == 4:
-                    gaze_x = -10 
-                    gaze_z = 0
-                    Force_x = -100 
-                    Force_z = 0
-
+            ipmx += 1#無効座標ファイル作成用☆☆☆#
             #箱のx方向座標がmaxを超えたとき
             if box_px > box_px_end:
-                box_px = box_px_start     #箱のx方向座標を折り返し
-                box_pz += box_dpz       #箱のy方向座標を更新
+                box_pz += box_dpz       #箱のz方向座標を更新
+                ipmz += 1#無効座標ファイル作成用☆☆☆#
 
-        #箱の作成が終わった後で描画するようにする。視点座標に箱の座標を使っているため。
-        if counter > 190:  
+                #4つの方角（北東南西）の処理が終わったときに衝突判定の学習用クラスラベルデータを出力
+                if box_px > box_px_end and box_pz > box_pz_end and rolling_direc_count == rolling_direc_count_max:
+                    if rolling_direc_count != 0:
+                        box_robo_functions.box_collision_class_label_file( class_label, "box_collision_class_label.txt")
+                        counter =  timing_update_position_and_clear_box - 1
+
+                #一つの方角の探索が終わったとき
+                if box_px > box_px_end and box_pz > box_pz_end:
+
+                    if rolling_direc_count == 0:
+                        #無効座標ファイル作成用☆☆☆#
+                        box_robo_functions.invalid_position_matrix_file( invalid_position_matrix, "invalid_position_matrix.txt")
+
+                    rolling_direc_count += 1 #rolling_direc_countを次の方角に更新
+                    #次の方角の探索の始まりの座標
+                    box_px = box_px_start
+                    box_pz = box_pz_start
+                    ipmx = 0#無効座標ファイル作成用☆☆☆#
+                    ipmz = 0#無効座標ファイル作成用☆☆☆#
+                    #e
+                    if rolling_direc_count == 2:
+                        gaze_x = 10 
+                        gaze_z = 0 
+                        Force_x = 120 
+                        Force_z = 0 
+                    #s
+                    if rolling_direc_count == 3:
+                        gaze_x = 0                
+                        gaze_z = 10
+                        Force_x = 0
+                        Force_z = 120
+                    #w
+                    if rolling_direc_count == 4:
+                        gaze_x = -10 
+                        gaze_z = 0
+                        Force_x = -120 
+                        Force_z = 0
+
+                    counter = timing_update_position_and_clear_box - 1
+
+                box_px = box_px_start     #箱のx方向座標を折り返し
+                ipmx = 0    #無効座標ファイル作成用
+            #箱ロボットをクリア
+            bodies_robo.clear()
+            geoms_robo.clear()
+
+        #箱ロボットを作成     
+        if counter == timing_create_box:
+            #無効座標を取得するとき
+            if rolling_direc_count == 0:
+                #無効座標ファイル作成用に一回り大きい箱ロボットを作成する
+                drop_box_robo(0.4, 0.4, 0.4,
+                            box_px, 0.21, box_pz, 1000.0)  #(lx, ly, lz, px, py, pz, density)
+            #衝突判定をするとき
+            else:
+                #箱ロボットを作成する
+                drop_box_robo(0.3, 0.3, 0.3,
+                            box_px, 0.151, box_pz, 10.0)  #(lx, ly, lz, px, py, pz, density)    
+                    
+        #箱ロボットがセットされたとき、障害物と重なっているかどうかを判定。
+        if counter == timing_judge1:
+            #無効座標を取得するrolling_direc_countのとき、無効座標を取得する。
+            if rolling_direc_count == 0:
+                #箱ロボットと障害物が重なったとき
+                if global_robo_obstacle_collision_flag == 1:
+                    print("無効座標取得:"+str(ipmx)) 
+                    invalid_position_matrix[ipmx][ipmz]= 3 #無効座標マトリックスの値を3にする
+                    global_robo_obstacle_collision_flag = 0 #箱ロボットと障害物の衝突flagを0にして、衝突してない状態に戻す。  
+                #counterをカウンターを最初に戻す。無効座標取得時は、画像のキャプチャとラベルの取得は行わない。  
+                counter =  timing_update_position_and_clear_box - 1  #
+
+            #衝突判定をするrolling_direc_countのとき、箱ロボットが作成された座標が無効座標なら、衝突判定をスキップする。
+            if rolling_direc_count != 0:
+                #無効座標のとき、スキップする
+                if invalid_position_matrix[ipmx][ipmz] == 3:
+                    print(3)
+                    global_robo_obstacle_collision_flag = 0 #箱ロボットと障害物の衝突flagを0にして、衝突してない状態に戻す。 
+                    counter = timing_update_position_and_clear_box - 1   #カウンターを最初に戻す。無効座標をスキップするときは、画像のキャプチャとラベルの取得は行わない。
+
+        #学習用の画像のキャプチャ
+        if counter == timing_img_capture:
+            capture2().save( "img/test" + str(len(class_label)) + ".jpg")  # 縮小した画像を保存
+
+        #箱を転がす1
+        if counter == timing_rolling_box:
+            bodies_robo[0].addForce(( Force_x, 0, Force_z))
+
+        #箱を転がす2
+        if counter == timing_rolling_box + 2:
+            bodies_robo[0].addForce(( Force_x, 0, Force_z))        
+
+        #衝突するか衝突しないかの学習用クラスラベルデータの取得
+        if counter == timing_judge2: 
+            #箱ロボットと障害物が衝突したとき、1のクラスラベルを取得
+            if global_robo_obstacle_collision_flag == 1:
+                print(1)
+                class_label.append(1)
+                global_robo_obstacle_collision_flag = 0 #箱ロボットと障害物の衝突flagを0にして、衝突してない状態に戻す。
+            #箱ロボットと障害物が衝突しなかったとき、0のクラスラベルを取得
+            else:
+                print(0)
+                class_label.append(0)
+            counter =  timing_update_position_and_clear_box - 1   #カウンターを最初に戻す
+
+        #箱の作成が終わった後から描画開始する。視点座標に箱の座標を使っているため。
+        if counter > timing_create_box + 1:        
             #異なる視点の画像を2つの画面に描画する
             glutSetWindow(subwinnum[0])
             glutDisplayFunc (_drawfunc0)
@@ -710,17 +573,24 @@ def _idlefunc ():
             glutDisplayFunc (_drawfunc1)
             glutPostRedisplay ()
 
+        #箱の作成が終わった後から、箱ロボットと障害物の衝突判定を開始する。判定するだけで、衝突処理は行わない。
+        if timing_create_box + 1 < counter and counter < timing_judge2:
+            #箱ロボットと障害物の衝突を検出し、フラグを立てる。
+            for g1 in geoms:
+                for g2 in geoms_robo:
+                    # Check if the objects do collide
+                    contacts = ode.collide(g1, g2)
+                    for c in contacts:
+                        global_robo_obstacle_collision_flag = 1
+        
         ##衝突検出部分を書き換え。#############
         # Simulate
         n = 4
         for i in range(n):
-            for g1 in geoms:    
-                for g2 in geoms:
-        
-                    near_callback((world,contactgroup), g1, g2)
-
-            for g1 in geoms:
-                near_callback((world,contactgroup), g1, floor)
+            for g1 in geoms:   
+                near_callback((world,contactgroup), g1, floor)#障害物と床のgeoms
+            for g1 in geoms_robo:
+                near_callback((world,contactgroup), g1, floor)#ロボと床のgeoms
 
             #space.collide((world,contactgroup), ode.collide_callback(g1, floor))
             # Simulation step
@@ -728,7 +598,7 @@ def _idlefunc ():
             # Remove all contact joints
             contactgroup.empty()
         ##衝突検出部分を書き換え。終了。#############
-
+        
     lasttime = time.time()
 
 glutIdleFunc (_idlefunc)
