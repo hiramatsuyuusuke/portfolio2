@@ -157,7 +157,7 @@ def drop_box_robo( lx, ly, lz, px, py, pz):
 
     global bodies_robo, geoms_robo, objcount
 
-    body, geom = create_box(world, space, 10, lx, ly, lz)
+    body, geom = create_box(world, space, 1, lx, ly, lz)
     body.setPosition( (px, py, pz) )
     theta = 0
     ct = cos (theta)
@@ -188,8 +188,8 @@ def drop_box( lx, ly, lz, px, py, pz, density):
 def drop_cylinder( rotation_num, r, h, px, py, pz, density):
     """Drop an object into the scene."""
     global bodies, geoms, objcount
-
-    body, geom = create_cylinder(world, space, density, 3, r, h)  #odeとopenglのシリンダーの方向を一致させるために、3(z軸方向)にする。
+    #odeとopenglのシリンダーの方向を一致させるために、3(z軸方向)にする。
+    body, geom = create_cylinder(world, space, density, 3, r, h)  
     
     if rotation_num == 1:
         theta = 3.1415*(0.0/180.0)  #シリンダーの方向はz軸方向
@@ -541,13 +541,9 @@ counter = 0
 objcount = 0
 lasttime = time.time()
 
-# 箱ロボットの行動を決める値
-judge = 0
-judge_pattern = 2
-gaze_x = -10
-gaze_z = 0
-Force_x = -120
-Force_z = 0
+# 箱ロボットの初期位置
+box_robo_start_x = 2.0
+box_robo_start_z = 2.0
 
 #テクスチャ読み込み#
 glutSetWindow(subwinnum[0])
@@ -567,6 +563,7 @@ Learned_model.load_state_dict(torch.load("Weight1.pth", weights_only=True))
 Learned_model.eval()  # 推論モードに切り替え
 
 
+#障害物の作成
 #ベッドの天板
 drop_box(2.2, 0.2, 1.2, 1.0, 0.3, -3.5, 1000)  #(lx, ly, lz, px, py, pz, density)   
 #ベッドの足#####
@@ -602,15 +599,44 @@ drop_box(0.15, 1., 0.15, -3.2, 0.5, 0., 1000)  #(lx, ly, lz, px, py, pz, density
 drop_box(0.15, 1., 0.15, -3.2, 0.5, 2., 1000)  #(lx, ly, lz, px, py, pz, density)  
 drop_box(0.15, 1., 0.15, -4.2, 0.5, 2., 1000)  #(lx, ly, lz, px, py, pz, density)   
 
-# 固定ジョイントの作成
+#障害物の固定ジョイントの作成
 fixed_joints=[]
 for i in range(19):
 #for i in range(38):
     fixed_joints.append(ode.FixedJoint(world))
-
     fixed_joints[i].attach(bodies[i], None)  # ボディを固定
     fixed_joints[i].setFixed()
 
+
+#二輪箱ロボットの箱の作成
+drop_box_robo(0.3, 0.28, 0.2, box_robo_start_x + 0.0, 0.15, box_robo_start_z + 0.0)  #(lx, ly, lz, px, py, pz)
+drop_box_robo(0.05, 0.05, 0.05, box_robo_start_x - 0.15, 0.15, box_robo_start_z + 0.0)  #(lx, ly, lz, px, py, pz)        
+fixed_joints.append(ode.FixedJoint(world))
+fixed_joints[19].attach(bodies_robo[0], bodies_robo[1])  # ボディを固定
+fixed_joints[19].setFixed()
+
+#二輪箱ロボットの車輪の作成1
+drop_cylinder(1, 0.15, 0.1, box_robo_start_x + 0.0, 0.15, box_robo_start_z + 0.17, 10)  #(rotation_num, r, h, px, py, pz, density) 位置座標はボトムではなく重心の座標に変換している。     
+hinge2_joints=[]
+hinge2_joints.append(ode.Hinge2Joint(world))
+hinge2_joints[0].attach(bodies_robo[0], bodies[19])
+hinge2_joints[0].setAnchor((box_robo_start_x + 0.0, 0.15, box_robo_start_z + 0.0))
+hinge2_joints[0].setAxis1((0, 0, 1))  # Set the first axis (e.g., wheel rotation)
+hinge2_joints[0].setAxis2((0, 1, 0))  # Set the second axis (e.g., suspension/steering)
+# 第2軸の回転を固定
+hinge2_joints[0].setParam(ode.ParamVel2, 0)  # 速度をゼロに設定
+hinge2_joints[0].setParam(ode.ParamFMax2, 1000)  # 強い力で固定
+
+#二輪箱ロボットの車輪の作成2
+drop_cylinder(1, 0.15, 0.1, box_robo_start_x + 0.0, 0.15, box_robo_start_z - 0.17, 10)  #(rotation_num, r, h, px, py, pz, density) 位置座標はボトムではなく重心の座標に変換している。  
+hinge2_joints.append(ode.Hinge2Joint(world))
+hinge2_joints[1].attach(bodies_robo[0], bodies[20])
+hinge2_joints[1].setAnchor((box_robo_start_x + 0.0, 0.15, box_robo_start_z + 0.0))
+hinge2_joints[1].setAxis1((0, 0, 1))  # Set the first axis (e.g., wheel rotation)
+hinge2_joints[1].setAxis2((0, 1, 0))  # Set the second axis (e.g., suspension/steering)
+# 第2軸の回転を固定
+hinge2_joints[1].setParam(ode.ParamVel2, 0)  # 速度をゼロに設定
+hinge2_joints[1].setParam(ode.ParamFMax2, 1000)  # 強い力で固定
 
 
 # keyboard callback
@@ -633,18 +659,22 @@ def _drawfunc0 ():
         glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.3, 0.3, 1, 1.0])     
         #ベッドのindex
         if 0 <= index and index <= 4:            
+        #if 0 <= index and index <= 9:             
             glMaterialfv(GL_FRONT, GL_AMBIENT, [0.5, 0.5, 0.5, 1.0])  #環境光の影響  
             glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.5, 0.5, 0.5, 1.0])
         #扇風機のindex
-        if 5 <= index and index <= 8:            
+        if 5 <= index and index <= 8:      
+        #if 10 <= index and index <= 17: 
             glMaterialfv(GL_FRONT, GL_AMBIENT, [1.0, 1.0, 1.0, 1.0])  #環境光の影響  
             glMaterialfv(GL_FRONT, GL_DIFFUSE, [1.0, 1.0, 1.0, 1.0])
         #机のindex
-        if 9 <= index and index <= 12:            
+        if 9 <= index and index <= 12:
+        #if 18 <= index and index <= 25:          
             glMaterialfv(GL_FRONT, GL_AMBIENT, [0.4, 0.23, 0.2, 1.0])  #環境光の影響  
             glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.4, 0.23, 0.2, 1.0])
         #棚のindex
-        if 13 <= index and index <= 18:            
+        if 13 <= index and index <= 18:
+        #if 26 <= index and index <= 37:      
             glMaterialfv(GL_FRONT, GL_AMBIENT, [0.2, 0.2, 0.2, 1.0])  #環境光の影響  
             glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.2, 0.2, 0.2, 1.0])
         draw_body(b)
@@ -655,13 +685,12 @@ def _drawfunc0 ():
             glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.5, 1, 0.5, 0.1])
         draw_body(b)
 
-
     draw_tex_polygon()
 
     glutSwapBuffers ()
 
 def _drawfunc1 ():
-    global bodies, objcount, gaze_x, gaze_z
+    global bodies, objcount
     global bodies_robo
     # Draw the scene
     prepare_GL()
@@ -669,27 +698,32 @@ def _drawfunc1 ():
     x,y,z = 0,0,0
     if objcount >= 1:
         x,y,z = bodies_robo[0].getPosition()#箱ロボットの座標
+        x1,y1,z1 = bodies_robo[1].getPosition()
 
     #箱ロボットの視点
-    gluLookAt ( x, y, z, x + gaze_x, 0.1, z + gaze_z, 0, 1, 0)#（視点位置、注視点位置、姿勢方向）
+    gluLookAt ( x, y, z, x1, 0.148, z1, 0, 1, 0)#（視点位置、注視点位置、姿勢方向）
 
     for index, b in enumerate(bodies):
         glMaterialfv(GL_FRONT, GL_AMBIENT, [0.3, 0.3, 1, 1.0])  #環境光の影響  
         glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.3, 0.3, 1, 1.0])     
         #ベッドのindex
-        if 0 <= index and index <= 4:            
+        if 0 <= index and index <= 4:
+        #if 0 <= index and index <= 9:  
             glMaterialfv(GL_FRONT, GL_AMBIENT, [0.5, 0.5, 0.5, 1.0])  #環境光の影響  
             glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.5, 0.5, 0.5, 1.0])
         #扇風機のindex
-        if 5 <= index and index <= 8:            
+        if 5 <= index and index <= 8:
+        #if 10 <= index and index <= 17:         
             glMaterialfv(GL_FRONT, GL_AMBIENT, [1.0, 1.0, 1.0, 1.0])  #環境光の影響  
             glMaterialfv(GL_FRONT, GL_DIFFUSE, [1.0, 1.0, 1.0, 1.0])
         #机のindex
-        if 9 <= index and index <= 12:            
+        if 9 <= index and index <= 12:
+        #if 18 <= index and index <= 25: 
             glMaterialfv(GL_FRONT, GL_AMBIENT, [0.4, 0.23, 0.2, 1.0])  #環境光の影響  
             glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.4, 0.23, 0.2, 1.0])
         #棚のindex
-        if 13 <= index and index <= 18:            
+        if 13 <= index and index <= 18:
+        #if 26 <= index and index <= 37:          
             glMaterialfv(GL_FRONT, GL_AMBIENT, [0.2, 0.2, 0.2, 1.0])  #環境光の影響  
             glMaterialfv(GL_FRONT, GL_DIFFUSE, [0.2, 0.2, 0.2, 1.0])
 
@@ -705,8 +739,7 @@ def _drawfunc1 ():
 # idle callback
 def _idlefunc ():
     global counter, lasttime
-    global judge, judge_pattern, gaze_x, gaze_z, Force_x, Force_z
-    global bodies, geoms, subwinnum, world,contactgroup
+    global bodies, geoms, subwinnum, world, contactgroup
     global bodies_robo, geoms_robo
 
     t = dt - (time.time() - lasttime)
@@ -714,55 +747,46 @@ def _idlefunc ():
         time.sleep(t)
 
     counter += 1
-    if counter==30:       
-        drop_box_robo(0.3, 0.3, 0.3,
-                     2.0, 0.2, 2.0)  #(lx, ly, lz, px, py, pz)
-        
-    if counter==200:     
-        judge = display_image_recognition()
-        if judge == 0:
-            bodies_robo[0].addForce(( Force_x, 0, Force_z))
 
-        if judge == 1:
-            judge_pattern += 1
-            #judge_pattern = random.randint(1, 4)
+    if counter==50:     
+        if display_image_recognition() == 0:
+            # Configure joint parameters (optional)
+            hinge2_joints[0].setParam(ode.ParamVel, -2.5)  # Set desired velocity
+            hinge2_joints[0].setParam(ode.ParamFMax, 100)  # Set maximum force
 
-            if judge_pattern== 4:
-                Force_x = 120
-                gaze_x = 10
-                Force_z = 0
-                gaze_z = 0
-            if judge_pattern== 3:
-                Force_x = 0
-                gaze_x = 0
-                Force_z = -120
-                gaze_z = -10
-            if judge_pattern== 2:
-                Force_x = -120
-                gaze_x = -10
-                Force_z = 0
-                gaze_z = 0                
-            if judge_pattern== 1:
-                Force_x = 0
-                gaze_x = 0
-                Force_z = 120
-                gaze_z = 10
+            # Configure joint parameters (optional)
+            hinge2_joints[1].setParam(ode.ParamVel, -2.5)  # Set desired velocity
+            hinge2_joints[1].setParam(ode.ParamFMax, 100)  # Set maximum force
 
-            if judge_pattern == 4:
-                judge_pattern = 0
+        if display_image_recognition() == 1:
+            # Configure joint parameters (optional)
+            hinge2_joints[0].setParam(ode.ParamVel, -2.5)  # Set desired velocity
+            hinge2_joints[0].setParam(ode.ParamFMax, 100)  # Set maximum force
 
-        #カウンターをオブジェクト作成後に戻す
-        counter = 160
+            # Configure joint parameters (optional)
+            hinge2_joints[1].setParam(ode.ParamVel, 2.5)  # Set desired velocity
+            hinge2_joints[1].setParam(ode.ParamFMax, 100)  # Set maximum force
+
+    if counter == 100:  
+        # Configure joint parameters (optional)
+        hinge2_joints[0].setParam(ode.ParamVel, 0)  # Set desired velocity
+        hinge2_joints[0].setParam(ode.ParamFMax, 100)  # Set maximum force
+
+        # Configure joint parameters (optional)
+        hinge2_joints[1].setParam(ode.ParamVel, 0)  # Set desired velocity
+        hinge2_joints[1].setParam(ode.ParamFMax, 100)  # Set maximum force
+        #カウンターを最初に戻す
+        counter = 0
   
-    if counter > 30:    
-        #異なる視点の画像を2つの画面に描画する
-        glutSetWindow(subwinnum[0])
-        glutDisplayFunc (_drawfunc0)
-        glutPostRedisplay ()
+ 
+    #異なる視点の画像を2つの画面に描画する
+    glutSetWindow(subwinnum[0])
+    glutDisplayFunc (_drawfunc0)
+    glutPostRedisplay ()
 
-        glutSetWindow(subwinnum[1])
-        glutDisplayFunc (_drawfunc1)
-        glutPostRedisplay ()
+    glutSetWindow(subwinnum[1])
+    glutDisplayFunc (_drawfunc1)
+    glutPostRedisplay ()
 
 
      ##衝突検出部分を書き換え。#############
@@ -787,9 +811,6 @@ def _idlefunc ():
      ##衝突検出部分を書き換え。終了。#############
 
     lasttime = time.time()
-
-
-
 
 
 glutIdleFunc (_idlefunc)
