@@ -1,0 +1,17 @@
+ode.cp312-win_amd64.pydは、このディレクトリのode.pyxを使って作成しました。
+このディレクトリのode.pyxは、以下のように変更されています。
+
+
+3559行目をコメントアウト:
+#        dSpaceCollide(self.sid, data, collide_callback)
+
+
+
+4463行目をコメントアウト:
+#    dSpaceCollide2(<dGeomID>id1, <dGeomID>id2, data, collide_callback)
+
+
+
+
+
+
