@@ -18,12 +18,9 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the files
 # LICENSE and LICENSE-BSD for more details.
 ######################################################################
-
 # This library is modified by yuusuke hiramatsu (comment out line 3559 and 4463).
 
-
 from ode cimport *
-
 
 paramLoStop        = 0
 paramHiStop        = 1
