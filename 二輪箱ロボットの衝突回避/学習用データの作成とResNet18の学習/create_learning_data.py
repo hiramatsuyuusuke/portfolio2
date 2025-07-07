@@ -16,7 +16,6 @@ import numpy as np
 
 import box_robo_functions
 
-
 # prepare_GL
 def prepare_GL():
     """Prepare drawing.
@@ -67,48 +66,6 @@ def drop_box_robo( lx, ly, lz, px, py, pz, density):
 
     bodies_robo.append(body)
     geoms_robo.append(geom)
-    objcount += 1
-
-# drop_box_object
-def drop_box( lx, ly, lz, px, py, pz, density):
-    """Drop an object into the scene."""
-    global bodies, geoms, objcount
-
-    body, geom = box_robo_functions.create_box(world, space, density, lx, ly, lz)
-    theta = 0
-    body.setPosition( (px, py, pz) )
-    ct = cos (theta)
-    st = sin (theta)
-    body.setRotation([ct, 0., -st, 0., 1., 0., st, 0., ct])#y軸回転
-    #body.setRotation([1., 0., 0., 0., ct, -st, 0., st, ct])#x軸回転 
-
-    bodies.append(body)
-    geoms.append(geom)
-    objcount += 1
-
-# drop_cylinder_object
-def drop_cylinder( rotation_num, r, h, px, py, pz, density):
-    """Drop an object into the scene."""
-    global bodies, geoms, objcount
-
-    body, geom = box_robo_functions. create_cylinder(world, space, density, 3, r, h)  #odeとopenglのシリンダーの方向を一致させるために、3(z軸方向)にする。
-    
-    if rotation_num == 1:
-        theta = 3.1415*(0.0/180.0)  #シリンダーの方向はz軸方向
-    if rotation_num == 2:
-        theta = 3.1415*(90.0/180.0) #シリンダーの方向をy軸方向にして、シリンダーを立てる。
-
-    body.setPosition( (px, py, pz) )  
-    ct = cos (theta)
-    st = sin (theta)
-
-    body.setRotation([1., 0., 0., 0., ct, st, 0., -st, ct])#x軸回転
-    #body.setRotation([ct, 0., -st, 0., 1., 0., st, 0., ct])#y軸回転
-    #body.setRotation([ct, st., 0., -st, ct, 0., 0., 0., 1.])#z軸回転
-
-    bodies.append(body)
-    geoms.append(geom)
-
     objcount += 1
 
 # Collision callback
@@ -333,7 +290,11 @@ tex_floor = box_robo_functions.load_texture("sample1.png")
 tex_wall = box_robo_functions.load_texture("sample2.png")
 
 #障害物の作成
-box_robo_functions.room3_1(drop_box, drop_cylinder)
+objcount_tmp = []
+objcount_tmp.append(0)
+box_robo_functions.room3_1(world, space, bodies, geoms, objcount_tmp)
+objcount += objcount_tmp[0]
+#print("objectcount" + str(objcount))
 
 # 障害物用の固定ジョイントの作成
 fixed_joints=[]
@@ -390,14 +351,12 @@ def _drawfunc0 ():
     glutSwapBuffers ()
 
 def _drawfunc1 ():
-    global bodies, objcount, gaze_x, gaze_z
+    global bodies, gaze_x, gaze_z
     global bodies_robo
     # Draw the scene
     prepare_GL()
     
-    x,y,z = 0,0,0
-    if objcount >= 1:
-        x,y,z = bodies_robo[0].getPosition()#箱ロボットの座標
+    x,y,z = bodies_robo[0].getPosition()#箱ロボットの座標
 
     #箱ロボットの視点
     gluLookAt ( x, y, z, x + gaze_x, 0.1, z + gaze_z, 0, 1, 0)#（視点位置、注視点位置、姿勢方向）
@@ -445,7 +404,6 @@ def _idlefunc ():
     #t = dt - (time.time() - lasttime)
     #if (t > 0):
         #time.sleep(t)
-
     if rolling_direc_count <= rolling_direc_count_max:#探索する方角の回数が4以下のとき。北東南西の４回。
         counter += 1
 

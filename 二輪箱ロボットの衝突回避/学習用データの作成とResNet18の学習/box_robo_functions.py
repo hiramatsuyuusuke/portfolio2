@@ -113,6 +113,51 @@ def create_cylinder(world, space, density, direction, r, h):
     geom.setBody(body)
     return body, geom 
 
+# drop_box_object
+def drop_box( world, space, bodies, geoms, objcount_tmp, lx, ly, lz, px, py, pz, density):
+    """Drop an object into the scene."""
+    #global bodies, geoms, objcount
+
+    body, geom = create_box(world, space, density, lx, ly, lz)
+    theta = 0
+    body.setPosition( (px, py, pz) )
+    ct = cos (theta)
+    st = sin (theta)
+    body.setRotation([ct, 0., -st, 0., 1., 0., st, 0., ct])#y軸回転
+    #body.setRotation([1., 0., 0., 0., ct, -st, 0., st, ct])#x軸回転 
+
+    bodies.append(body)
+    geoms.append(geom)
+    #objcount += 1
+    objcount_tmp[0] += 1
+
+# drop_cylinder_object
+def drop_cylinder( world, space, bodies, geoms, objcount_tmp, rotation_num, r, h, px, py, pz, density):
+    """Drop an object into the scene."""
+    #global bodies, geoms, objcount
+
+    body, geom = create_cylinder(world, space, density, 3, r, h)  #odeとopenglのシリンダーの方向を一致させるために、3(z軸方向)にする。
+    
+    if rotation_num == 1:
+        theta = 3.1415*(0.0/180.0)  #シリンダーの方向はz軸方向
+    if rotation_num == 2:
+        theta = 3.1415*(90.0/180.0) #シリンダーの方向をy軸方向にして、シリンダーを立てる。
+
+    body.setPosition( (px, py, pz) )  
+    ct = cos (theta)
+    st = sin (theta)
+
+    body.setRotation([1., 0., 0., 0., ct, st, 0., -st, ct])#x軸回転
+    #body.setRotation([ct, 0., -st, 0., 1., 0., st, 0., ct])#y軸回転
+    #body.setRotation([ct, st., 0., -st, ct, 0., 0., 0., 1.])#z軸回転
+
+    bodies.append(body)
+    geoms.append(geom)
+
+    #objcount += 1
+    objcount_tmp[0] += 1
+
+
 #テクスチャ読み込み関数
 def load_texture(texture_file_name):
 
@@ -233,61 +278,61 @@ def draw_tex_polygon(tex_floor, tex_wall):
     glFlush()#??#
 
 
-def room3_1(drop_box, drop_cylinder):
+def room3_1( world, space, bodies, geoms, objcount_tmp):
             
     #ベッドの天板
-    drop_box(2.2, 0.2, 1.2,    
+    drop_box( world, space, bodies, geoms, objcount_tmp, 2.2, 0.2, 1.2,    
             1.0, 0.3, -3.5, 1000)  #(lx, ly, lz, px, py, pz, density)   
     #ベッドの足#####
-    drop_cylinder(2, 0.1, 0.2,     
+    drop_cylinder( world, space, bodies, geoms, objcount_tmp, 2, 0.1, 0.2,     
             0., 0.1, -4., 1000)  #(rotation_num, r, h, px, py, pz, density) 位置座標はボトムではなく重心の座標に変換している。
-    drop_cylinder(2, 0.1, 0.2,     
+    drop_cylinder( world, space, bodies, geoms, objcount_tmp, 2, 0.1, 0.2,     
             2., 0.1, -4., 1000)  #(rotation_num, r, h, px, py, pz, density) 位置座標はボトムではなく重心の座標に変換している。
-    drop_cylinder(2, 0.1, 0.2,     
+    drop_cylinder( world, space, bodies, geoms, objcount_tmp, 2, 0.1, 0.2,     
             2., 0.1, -3., 1000)  #(rotation_num, r, h, px, py, pz, density) 位置座標はボトムではなく重心の座標に変換している。
-    drop_cylinder(2, 0.1, 0.2,     
+    drop_cylinder( world, space, bodies, geoms, objcount_tmp, 2, 0.1, 0.2,     
             0., 0.1, -3., 1000)  #(rotation_num, r, h, px, py, pz, density) 位置座標はボトムではなく重心の座標に変換している。
     
     #扇風機の頭1
-    drop_cylinder(1, 0.3, 0.1,     
+    drop_cylinder( world, space, bodies, geoms, objcount_tmp, 1, 0.3, 0.1,     
             0, 0.7, -0.25 + 2.0, 1000)  #(rotation_num, r, h, px, py, pz, density) 位置座標はボトムではなく重心の座標に変換している。
     #扇風機の頭2
-    drop_cylinder(1, 0.1, 0.4,     
+    drop_cylinder( world, space, bodies, geoms, objcount_tmp, 1, 0.1, 0.4,     
             0, 0.7, 0. + 2.0, 1000)  #(rotation_num, r, h, px, py, pz, density) 位置座標はボトムではなく重心の座標に変換している。
     #扇風機の足1
-    drop_cylinder(2, 0.4, 0.1,     
+    drop_cylinder( world, space, bodies, geoms, objcount_tmp, 2, 0.4, 0.1,     
             0, 0.05, 0. + 2.0, 1000)  #(rotation_num, r, h, px, py, pz, density) 位置座標はボトムではなく重心の座標に変換している。
     #扇風機の足2
-    drop_cylinder(2, 0.1, 0.6,     
+    drop_cylinder( world, space, bodies, geoms, objcount_tmp, 2, 0.1, 0.6,     
             0, 0.3, 0. + 2.0, 1000)  #(rotation_num, r, h, px, py, pz, density) 位置座標はボトムではなく重心の座標に変換している。
 
     #机の天板
-    drop_box(1.3, 0.2, 1.7,    
+    drop_box( world, space, bodies, geoms, objcount_tmp, 1.3, 0.2, 1.7,    
             3.8, 0.7, 0.825, 1000)  #(lx, ly, lz, px, py, pz, density)
     #机の脚
-    drop_box(0.15, 0.6, 0.15, 3.3, 0.3, 0., 1000)  #(lx, ly, lz, px, py, pz, density)  
-    drop_box(0.15, 0.6, 0.15, 4.3, 0.3, 0., 1000)  #(lx, ly, lz, px, py, pz, density)  
+    drop_box( world, space, bodies, geoms, objcount_tmp, 0.15, 0.6, 0.15, 3.3, 0.3, 0., 1000)  #(lx, ly, lz, px, py, pz, density)  
+    drop_box( world, space, bodies, geoms, objcount_tmp, 0.15, 0.6, 0.15, 4.3, 0.3, 0., 1000)  #(lx, ly, lz, px, py, pz, density)  
     #机の引き出し
-    drop_box(1.0, 0.6, 0.5,    
+    drop_box( world, space, bodies, geoms, objcount_tmp, 1.0, 0.6, 0.5,    
             3.8, 0.3, 1.4, 1000)  #(lx, ly, lz, px, py, pz, density)     
 
     #棚の天板1
-    drop_box(1.0, 0.1, 2.0, 0.5 - 4.2, 0.6, 1.0, 1000)  #(lx, ly, lz, px, py, pz, density)  
+    drop_box( world, space, bodies, geoms, objcount_tmp, 1.0, 0.1, 2.0, 0.5 - 4.2, 0.6, 1.0, 1000)  #(lx, ly, lz, px, py, pz, density)  
     #棚の天板2
-    drop_box(1.0, 0.1, 2.0, 0.5 - 4.2, 1.0, 1.0, 1000)  #(lx, ly, lz, px, py, pz, density)  
+    drop_box( world, space, bodies, geoms, objcount_tmp, 1.0, 0.1, 2.0, 0.5 - 4.2, 1.0, 1.0, 1000)  #(lx, ly, lz, px, py, pz, density)  
     #棚の脚
-    drop_box(0.15, 1., 0.15, 0. - 4.2, 0.5, 0., 1000)  #(lx, ly, lz, px, py, pz, density)  
-    drop_box(0.15, 1., 0.15, 1. - 4.2, 0.5, 0., 1000)  #(lx, ly, lz, px, py, pz, density)  
-    drop_box(0.15, 1., 0.15, 1. - 4.2, 0.5, 2., 1000)  #(lx, ly, lz, px, py, pz, density)  
-    drop_box(0.15, 1., 0.15, 0. - 4.2, 0.5, 2., 1000)  #(lx, ly, lz, px, py, pz, density)      
+    drop_box( world, space, bodies, geoms, objcount_tmp, 0.15, 1., 0.15, 0. - 4.2, 0.5, 0., 1000)  #(lx, ly, lz, px, py, pz, density)  
+    drop_box( world, space, bodies, geoms, objcount_tmp, 0.15, 1., 0.15, 1. - 4.2, 0.5, 0., 1000)  #(lx, ly, lz, px, py, pz, density)  
+    drop_box( world, space, bodies, geoms, objcount_tmp, 0.15, 1., 0.15, 1. - 4.2, 0.5, 2., 1000)  #(lx, ly, lz, px, py, pz, density)  
+    drop_box( world, space, bodies, geoms, objcount_tmp, 0.15, 1., 0.15, 0. - 4.2, 0.5, 2., 1000)  #(lx, ly, lz, px, py, pz, density)      
     
     #外周
-    drop_box(0.3, 1.0, 8.99,
+    drop_box( world, space, bodies, geoms, objcount_tmp, 0.3, 1.0, 8.99,
                 -4.651, 0.5001, 0.001, 1000)  #(lx, ly, lz, px, py, pz, density)
-    drop_box(0.3, 1.0, 8.99,
+    drop_box( world, space, bodies, geoms, objcount_tmp, 0.3, 1.0, 8.99,
                 4.651, 0.5001, 0.001, 1000)  #(lx, ly, lz, px, py, pz, density)
-    drop_box(8.99, 1.0, 0.3,
+    drop_box( world, space, bodies, geoms, objcount_tmp, 8.99, 1.0, 0.3,
                 0.001, 0.5001, 4.651, 1000)  #(lx, ly, lz, px, py, pz, density)
-    drop_box(8.99, 1.0, 0.3,
+    drop_box( world, space, bodies, geoms, objcount_tmp, 8.99, 1.0, 0.3,
                 0.001, 0.5001, -4.651, 1000)  #(lx, ly, lz, px, py, pz, density)
     
