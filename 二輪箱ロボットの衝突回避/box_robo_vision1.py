@@ -84,12 +84,7 @@ def draw_body(body):
 
         #シリンダーの外周を作成
         r,h = body.cylindersize
-        R=[1., 0., 0., 0., 1, 0, 0., 0, 1]#x軸周りに0度回転
-        rot = [R[0], R[3], R[6], 0.,
-            R[1], R[4], R[7], 0.,
-            R[2], R[5], R[8], 0.,
-            0, 0, -h*0.5, 1.0]  #z軸方向に -h*0.5 平行移動
-        glMultMatrixd(rot)
+        glTranslated(0.0, 0.0, -h*0.5) #z軸方向に -h*0.5 平行移動
         quadric = gluNewQuadric()
         gluQuadricNormals(quadric, GLU_SMOOTH)
         gluCylinder(quadric, r, r, h, 10, 10)  # Base radius, top radius, height, slices, stacks    
@@ -99,12 +94,8 @@ def draw_body(body):
         quadric = gluNewQuadric()
         gluQuadricNormals(quadric, GLU_SMOOTH)
         gluDisk(quadric, 0, r, 10, 10)  # Inner radius, outer radius, slices, loops
-        rot = [R[0], R[3], R[6], 0.,
-            R[1], R[4], R[7], 0.,
-            R[2], R[5], R[8], 0.,
-            0, 0, h, 1.0]   #z軸方向に h 平行移動
-
-        glMultMatrixd(rot)
+        
+        glTranslated(0.0, 0.0, h) #z軸方向に h 平行移動    
         gluQuadricNormals(quadric, GLU_SMOOTH)
         gluDisk(quadric, 0, r, 10, 10)  # Inner radius, outer radius, slices, loops
         gluDeleteQuadric(quadric)
