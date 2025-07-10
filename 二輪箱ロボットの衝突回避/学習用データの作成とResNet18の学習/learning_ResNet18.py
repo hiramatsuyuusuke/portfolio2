@@ -25,7 +25,7 @@ while i < 8:
     i += 1
 
 #「転がる箱の衝突回避」用のクラスラベルを読み込む
-np_class_label = np.loadtxt("box_collision_class_label.txt", delimiter=",")
+np_class_label = np.loadtxt("label_data_for_learning_ResNet18.txt", delimiter=",")
 print(len(np_class_label))
 img_file_num = len(np_class_label)
 

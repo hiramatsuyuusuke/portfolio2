@@ -419,7 +419,7 @@ def _idlefunc ():
                 #4つの方角（北東南西）の処理が終わったときに衝突判定の学習用クラスラベルデータを出力
                 if box_px > box_px_end and box_pz > box_pz_end and rolling_direc_count == rolling_direc_count_max:
                     if rolling_direc_count != 0:
-                        box_robo_functions.box_collision_class_label_file( class_label, "box_collision_class_label.txt")
+                        box_robo_functions.box_collision_class_label_file( class_label, "label_data_for_learning_ResNet18.txt")
                         counter =  timing_update_position_and_clear_box - 1
 
                 #一つの方角の探索が終わったとき
