@@ -24,16 +24,22 @@
     <div id="info_id2">
         <hr>
         <h3 id="info0001">arm_robo_vision1.pyの実行例</h3>
-        <video src="videos/robot_arm_vision1.mp4" controls class="video_index2"></video>
+        <video controls class="video_index2">
+            <source src="videos/robot_arm_vision1.mp4">
+            お使いのブラウザは動画タグをサポートしていません。
+        </video>
+        <pre>
 
-<pre style = "font-size: 15px">
-
-ロボットアームの視界からボールを拾えるかどうかを判定して、拾える
-と認識したタイミングでアームを下降させます。アームを下降させるか
-どうかの判定は、ボール拾いを学習させた深層学習モデル(ResNet18)
-が行います。下降のタイミング以外のロボットアームの動作は、あらか
-じめ決まっています。
-</pre> 
+        </pre>
+        <p style = "font-size: 15px">
+        　ロボットアームの視界からボールを拾えるかどうかを判定して、拾えると認識したタイミングでアームを下降させます。
+        アームを下降させるかどうかの判定は、ボール拾いを学習させた深層学習モデル(ResNet18)が行います。
+        下降のタイミング以外のロボットアームの動作は、あらかじめ決まっています。
+        </p>
+        <p style = "font-size: 15px">
+        　今回のResNet18は、一直線上に並んだボールの配置しか学習していないので、2次元的にボールを配置したシーンでは、ボールを拾えなくなったりしました。
+        動画では、上手くボールを拾えるように、2次元的な配置を調整しています。
+        </p> 
 
         <hr>
 
