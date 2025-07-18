@@ -797,7 +797,10 @@ def _idlefunc ():
 
     x,y,z = bodies_robo[3].getPosition()#手首の座標
     counter += 1
-    rise_flag = 0
+
+    #アームの上昇終了判定フラグをリセット
+    if counter==1:
+        rise_flag = 0
 
     #ボールを配置する
     if counter==10:
