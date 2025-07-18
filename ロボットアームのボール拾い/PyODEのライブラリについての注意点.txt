@@ -1,0 +1,2 @@
+ode.pyxのコードを修正したため、space.collide()が使えなくなっていますが、代わりにnear_callback()関数を直接使って
+衝突検出できます。
