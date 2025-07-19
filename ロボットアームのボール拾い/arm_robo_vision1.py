@@ -377,7 +377,7 @@ def capture2():
 
     return resized_image
 
-#ResNet18を使って、衝突するかどうかを判定
+#ResNet18を使って、アームを下降させるかどうかを判定
 def display_image_recognition():
 
     # 画面をキャプチャ
@@ -391,16 +391,9 @@ def display_image_recognition():
     # 推論
     with torch.no_grad():
         Learned_model_output = Learned_model(input_tensor)
-
-    #衝突するかどうかを判定
-    if Learned_model_output[0,0] < Learned_model_output[0,1]:    
-        #print(1)
-        #print(Learned_model_output)
-        return 1
-    else:
-        #print(0)
-        #print(Learned_model_output)
-        return 0
+    print(Learned_model_output[0,0], Learned_model_output[0,1])
+    #評価値を返す
+    return Learned_model_output[0,0]
 
 #テクスチャ読み込み関数
 def load_texture(texture_file_name):
@@ -583,6 +576,7 @@ grip_counter = 0    #ハンドを握る時間のカウンター
 base_rotation_counter = 0  #台座を回転させる時間のカウンター
 rise_flag = 0       #アームの上昇終了判定フラグ
 base_rotation_flag = 0  #台座を回転させるタイミングのフラグ
+prev_recog = 0
 
 #テクスチャ読み込み#
 glutSetWindow(subwinnum[0])
@@ -595,10 +589,10 @@ tex_wall = load_texture("sample2.png")
 #学習していないResNet18 modelを読み込んでインスタンスを生成
 Learned_model = models.resnet18(weights = None)
 # Modify the final fully connected layer for a custom number of classes
-num_classes = 2 #衝突するクラスと衝突しないクラスの2つ
+num_classes = 2 #ボールを拾えたクラスと拾えなかったクラスの2つ
 Learned_model.fc = nn.Linear(Learned_model.fc.in_features, num_classes)
 #3D空間の画像を使って学習したResNet18の読み込み
-Learned_model.load_state_dict(torch.load("Weight1.pth", weights_only=True))
+Learned_model.load_state_dict(torch.load("Weight2.pth", weights_only=True))
 Learned_model.eval()  # 推論モードに切り替え
 
 #ロボットアームの作成
@@ -720,7 +714,7 @@ glutKeyboardFunc (_keyfunc)
 
 # draw callback
 def _drawfunc0 ():
-    global bodies, bodies_robo
+    global bodies, bodies_robo, prev_recog
     # Draw the scene
     prepare_GL()
 
@@ -782,6 +776,7 @@ def _idlefunc ():
     global rise_flag, base_rotation_flag
     global bodies, bodies_robo, geoms, geoms_robo
     global subwinnum, world, contactgroup
+    global prev_recog
 
     t = dt - (time.time() - lasttime)
     if (t > 0):
@@ -793,7 +788,7 @@ def _idlefunc ():
     #アームの上昇終了判定フラグをリセット
     if counter==1:
         rise_flag = 0
-
+        prev_recog = 0
     #ボールを配置する
     if counter==10:
         drop_sphere_counter += 1
@@ -858,6 +853,7 @@ def _idlefunc ():
         
     #アーム発進。
     if counter>550:
+       
         #手首のx座標が2以下になったらそのまま戻る
         if x < -2.0 and counter > 400:
             #台座の回転フラグを立てる
@@ -865,14 +861,20 @@ def _idlefunc ():
             #そのまま戻るためのパラメータ設定
             counter = 550
             grip_counter = 200
-        #下降
-        if display_image_recognition() == 1 and y > 0.25 and grip_counter == 0:
+        #現在の評価値を取得
+        curr_recog = display_image_recognition()    #ResNet18を使って評価値を取得
+        #アームを下降させるかどうかを判定
+        if curr_recog < 2.0 and curr_recog > prev_recog and y > 0.25 and grip_counter == 0:
+            #下降
             hinge_joints[1].setParam(ode.ParamVel, -0.3)  # 速度
             hinge_joints[1].setParam(ode.ParamFMax, 200)  # max力       
             hinge_joints[2].setParam(ode.ParamVel, 0.0 )  # 速度
             hinge_joints[2].setParam(ode.ParamFMax, 200)  # max力
             hinge_joints[3].setParam(ode.ParamVel, 0.3)  # 速度
             hinge_joints[3].setParam(ode.ParamFMax, 200)  # max力  
+        #一つ前の評価値を記録
+        prev_recog = display_image_recognition()    #ResNet18を使って評価値を取得
+
         #下降をストップ    
         if y <= 0.25 and grip_counter < 200:          
             #下降をストップ
