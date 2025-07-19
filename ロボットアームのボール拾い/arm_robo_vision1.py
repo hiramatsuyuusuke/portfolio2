@@ -602,123 +602,115 @@ Learned_model.load_state_dict(torch.load("Weight1.pth", weights_only=True))
 Learned_model.eval()  # 推論モードに切り替え
 
 #ロボットアームの作成
+fixed_joints=[]
+hinge_joints=[]
 #0:台座
 drop_box_robo(0.3, 0.5, 0.3, 0.0, 0.25, 0.0, 1.0, 0.0)  #(lx, ly, lz, px, py, pz, density, y_rotation)
-hinge_joint4 = ode.HingeJoint(world)
-hinge_joint4.attach(bodies_robo[0], None)  # 物体1と物体2を接続
-hinge_joint4.setAnchor((0.0, 0.0, 0.0))  # Set the anchor point (hinge location)
-hinge_joint4.setAxis((0, 1, 0))    # 回転軸を設定
+hinge_joints.append(ode.HingeJoint(world))
+hinge_joints[0].attach(bodies_robo[0], None)
+hinge_joints[0].setAnchor((0.0, 0.0, 0.0))  # Set the anchor point (hinge location)
+hinge_joints[0].setAxis((0, 1, 0))    # 回転軸を設定
 #1:腕1
 drop_box_robo(0.9, 0.1, 0.1, -0.7, 0.5, 0.0, 1.0, 0.0)  #(lx, ly, lz, px, py, pz, density, y_rotation)
-hinge_joint1 = ode.HingeJoint(world)
-hinge_joint1.attach(bodies_robo[0], bodies_robo[1])  # 物体1と物体2を接続
-hinge_joint1.setAnchor((-0.25, 0.5, 0.0))  # Set the anchor point (hinge location)
-hinge_joint1.setAxis((0, 0, 1))    # 回転軸を設定
+hinge_joints.append(ode.HingeJoint(world))
+hinge_joints[1].attach(bodies_robo[0], bodies_robo[1])  # 台座1と腕1を接続
+hinge_joints[1].setAnchor((-0.25, 0.5, 0.0))  # Set the anchor point (hinge location)
+hinge_joints[1].setAxis((0, 0, 1))    # 回転軸を設定
 #2:腕2
 drop_box_robo(0.9, 0.1, 0.1, -1.8, 0.5, 0.0, 1.0, 0.0)  #(lx, ly, lz, px, py, pz, density, y_rotation)
-hinge_joint2 = ode.HingeJoint(world)
-hinge_joint2.attach(bodies_robo[1], bodies_robo[2])  # 物体1と物体2を接続
-hinge_joint2.setAnchor((-1.25, 0.51, 0.0))  # Set the anchor point (hinge location)
-hinge_joint2.setAxis((0, 0, 1))    # 回転軸を設定
+hinge_joints.append(ode.HingeJoint(world))
+hinge_joints[2].attach(bodies_robo[1], bodies_robo[2])  # 台座1と腕2を接続
+hinge_joints[2].setAnchor((-1.25, 0.51, 0.0))  # Set the anchor point (hinge location)
+hinge_joints[2].setAxis((0, 0, 1))    # 回転軸を設定
 #3:手首
 drop_box_robo(0.01, 0.1, 0.3, -2.25, 0.5, 0.0, 1.0, 0.0)  #(lx, ly, lz, px, py, pz, density, y_rotation)
-hinge_joint3 = ode.HingeJoint(world)
-hinge_joint3.attach(bodies_robo[2], bodies_robo[3])  # 物体1と物体2を接続
-hinge_joint3.setAnchor((-2.25, 0.51, 0.0))  # Set the anchor point (hinge location)
-hinge_joint3.setAxis((0, 0, 1))    # 回転軸を設定
+hinge_joints.append(ode.HingeJoint(world))
+hinge_joints[3].attach(bodies_robo[2], bodies_robo[3])  # 腕2と手首を接続
+hinge_joints[3].setAnchor((-2.25, 0.51, 0.0))  # Set the anchor point (hinge location)
+hinge_joints[3].setAxis((0, 0, 1))    # 回転軸を設定
 #4:手先
 drop_box_robo(0.1, 0.1, 0.01, -2.3, 0.5, 0.15, 1.0, 0.0)  #(lx, ly, lz, px, py, pz, density, y_rotation)
-fixed_joint3 = ode.FixedJoint(world)
-fixed_joint3.attach(bodies_robo[3], bodies_robo[4])  # ボディを固定
-fixed_joint3.setFixed()
+fixed_joints.append(ode.FixedJoint(world))
+fixed_joints[0].attach(bodies_robo[3], bodies_robo[4])  # 手首と手先を固定
+fixed_joints[0].setFixed()
 #5:手先
 drop_box_robo(0.1, 0.1, 0.01, -2.3, 0.5, -0.15, 1.0, 0.0)  #(lx, ly, lz, px, py, pz, density, y_rotation)
-fixed_joint4 = ode.FixedJoint(world)
-fixed_joint4.attach(bodies_robo[3], bodies_robo[5])  # ボディを固定
-fixed_joint4.setFixed()
-#6:手先4の関節
+fixed_joints.append(ode.FixedJoint(world))
+fixed_joints[1].attach(bodies_robo[3], bodies_robo[5])  # 手首と手先を固定
+fixed_joints[1].setFixed()
+#6:手先4の指の根元
 drop_box_robo(0.02, 0.25, 0.01, -2.37, 0.5, 0.15, 1., -0.0)  #(lx, ly, lz, px, py, pz, density, y_rotation)
-hinge_joint5 = ode.HingeJoint(world)
-hinge_joint5.attach(bodies_robo[4], bodies_robo[6])  # ボディを固定
-hinge_joint5.setAnchor((-2.35, 0.5, 0.15))  # Set the anchor point (hinge location)
-hinge_joint5.setAxis((0, 1, 0))    # 回転軸を設定
+hinge_joints.append(ode.HingeJoint(world))
+hinge_joints[4].attach(bodies_robo[4], bodies_robo[6])  # 手先と指の根元を接続
+hinge_joints[4].setAnchor((-2.35, 0.5, 0.15))  # Set the anchor point (hinge location)
+hinge_joints[4].setAxis((0, 1, 0))    # 回転軸を設定
 #7:手先4の内側の指。左奥。
 drop_box_robo(0.01, 0.02, 0.1, -2.42, 0.54, 0.125, 1., -1.2)  #(lx, ly, lz, px, py, pz, density, y_rotation)
-fixed_joint5 = ode.FixedJoint(world)
-fixed_joint5.attach(bodies_robo[6], bodies_robo[7])  # ボディを固定
-fixed_joint5.setFixed()
+fixed_joints.append(ode.FixedJoint(world))
+fixed_joints[2].attach(bodies_robo[6], bodies_robo[7])  # 指の根元と指を接続
+fixed_joints[2].setFixed()
 #8:手先4の内側の指。左手前。
 drop_box_robo(0.01, 0.02, 0.1, -2.42, 0.46, 0.125, 1., -1.2)  #(lx, ly, lz, px, py, pz, density, y_rotation)
-fixed_joint6 = ode.FixedJoint(world)
-fixed_joint6.attach(bodies_robo[6], bodies_robo[8])  # ボディを固定
-fixed_joint6.setFixed()
-#9:手先5の関節
+fixed_joints.append(ode.FixedJoint(world))
+fixed_joints[3].attach(bodies_robo[6], bodies_robo[8])  # 指の根元と指を接続
+fixed_joints[3].setFixed()
+#9:手先5の指の根元
 drop_box_robo(0.02, 0.25, 0.01, -2.37, 0.5, -0.15, 1., 0.0)  #(lx, ly, lz, px, py, pz, density, y_rotation)
-hinge_joint6 = ode.HingeJoint(world)
-hinge_joint6.attach(bodies_robo[5], bodies_robo[9])  # ボディを固定
-hinge_joint6.setAnchor((-2.35, 0.5, -0.15))  # Set the anchor point (hinge location)
-hinge_joint6.setAxis((0, 1, 0))    # 回転軸を設定
+hinge_joints.append(ode.HingeJoint(world))
+hinge_joints[5].attach(bodies_robo[5], bodies_robo[9])  # 手先と指の根元を接続
+hinge_joints[5].setAnchor((-2.35, 0.5, -0.15))  # Set the anchor point (hinge location)
+hinge_joints[5].setAxis((0, 1, 0))    # 回転軸を設定
 #10:手先5の内側の指。右奥。
 drop_box_robo(0.01, 0.02, 0.1, -2.42, 0.54, -0.125, 1., 1.2)  #(lx, ly, lz, px, py, pz, density, y_rotation)
-fixed_joint7 = ode.FixedJoint(world)
-fixed_joint7.attach(bodies_robo[9], bodies_robo[10])  # ボディを固定
-fixed_joint7.setFixed()
+fixed_joints.append(ode.FixedJoint(world))
+fixed_joints[4].attach(bodies_robo[9], bodies_robo[10])  # 指の根元と指を接続
+fixed_joints[4].setFixed()
 #11:手先5の内側の指。右手前。
 drop_box_robo(0.01, 0.02, 0.1, -2.42, 0.46, -0.125, 1., 1.2)  #(lx, ly, lz, px, py, pz, density, y_rotation)
-fixed_joint8 = ode.FixedJoint(world)
-fixed_joint8.attach(bodies_robo[9], bodies_robo[11])  # ボディを固定
-fixed_joint8.setFixed()
+fixed_joints.append(ode.FixedJoint(world))
+fixed_joints[5].attach(bodies_robo[9], bodies_robo[11])  # 指の根元と指を接続
+fixed_joints[5].setFixed()
 #12:手先4の外の指。左手前。
 drop_box_robo(0.01, 0.02, 0.1, -2.42, 0.38, 0.125, 1., -1.2)  #(lx, ly, lz, px, py, pz, density, y_rotation)
-fixed_joint11 = ode.FixedJoint(world)
-fixed_joint11.attach(bodies_robo[6], bodies_robo[12])  # ボディを固定
-fixed_joint11.setFixed()
+fixed_joints.append(ode.FixedJoint(world))
+fixed_joints[6].attach(bodies_robo[6], bodies_robo[12])  # 指の根元と指を接続
+fixed_joints[6].setFixed()
 #13:手先5の外の指。右手前。
 drop_box_robo(0.01, 0.02, 0.1, -2.42, 0.38, -0.125, 1., 1.2)  #(lx, ly, lz, px, py, pz, density, y_rotation)
-fixed_joint15 = ode.FixedJoint(world)
-fixed_joint15.attach(bodies_robo[9], bodies_robo[13])  # ボディを固定
-fixed_joint15.setFixed()
+fixed_joints.append(ode.FixedJoint(world))
+fixed_joints[7].attach(bodies_robo[9], bodies_robo[13])  # 指の根元と指を接続
+fixed_joints[7].setFixed()
 #14:手先4の外の指。左奥。
 drop_box_robo(0.01, 0.02, 0.1, -2.42, 0.62, 0.125, 1., -1.2)  #(lx, ly, lz, px, py, pz, density, y_rotation)
-fixed_joint16 = ode.FixedJoint(world)
-fixed_joint16.attach(bodies_robo[6], bodies_robo[14])  # ボディを固定
-fixed_joint16.setFixed()
+fixed_joints.append(ode.FixedJoint(world))
+fixed_joints[8].attach(bodies_robo[6], bodies_robo[14])  # 指の根元と指を接続
+fixed_joints[8].setFixed()
 #15:手先5の外の指。右奥。
 drop_box_robo(0.01, 0.02, 0.1, -2.42, 0.62, -0.125, 1., 1.2)  #(lx, ly, lz, px, py, pz, density, y_rotation)
-fixed_joint17 = ode.FixedJoint(world)
-fixed_joint17.attach(bodies_robo[9], bodies_robo[15])  # ボディを固定
-fixed_joint17.setFixed()
-
+fixed_joints.append(ode.FixedJoint(world))
+fixed_joints[9].attach(bodies_robo[9], bodies_robo[15])  # 指の根元と指を接続
+fixed_joints[9].setFixed()
 #16～19:囲い
 drop_box_robo(0.05, 0.1, 1.0, -0.7, 0.05, 0.0, 1.0, 0.0)  #(lx, ly, lz, px, py, pz, density, y_rotation)
 drop_box_robo(1.0, 0.1, 0.05, -0.1, 0.05, 0.5, 1.0, 0.0)  #(lx, ly, lz, px, py, pz, density, y_rotation)
 drop_box_robo(0.05, 0.1, 1.0, 0.5, 0.05, 0.0, 1.0, 0.0)  #(lx, ly, lz, px, py, pz, density, y_rotation)
 drop_box_robo(1.0, 0.1, 0.05, -0.1, 0.05, -0.5, 1.0, 0.0)  #(lx, ly, lz, px, py, pz, density, y_rotation)
-
 #20:ロボットアームの視点位置用オブジェクト
 drop_box_robo(0.1, 0.1, 0.1, 0.0, 0.5, 0.5, 1.0, 0.0)   #(lx, ly, lz, px, py, pz, density, y_rotation)
-fixed_joint18 = ode.FixedJoint(world)
-fixed_joint18.attach(bodies_robo[0], bodies_robo[20])  # ボディを固定
-fixed_joint18.setFixed()
+fixed_joints.append(ode.FixedJoint(world))
+fixed_joints[10].attach(bodies_robo[0], bodies_robo[20])  # ボディを固定
+fixed_joints[10].setFixed()
 #21:ロボットアームの注視点位置用オブジェクト
 drop_box_robo(0.1, 0.1, 0.1, -1.0, 0.4, 0.2, 1.0, 0.0)   #(lx, ly, lz, px, py, pz, density, y_rotation)
-fixed_joint19 = ode.FixedJoint(world)
-fixed_joint19.attach(bodies_robo[0], bodies_robo[21])  # ボディを固定
-fixed_joint19.setFixed()
+fixed_joints.append(ode.FixedJoint(world))
+fixed_joints[11].attach(bodies_robo[0], bodies_robo[21])  # ボディを固定
+fixed_joints[11].setFixed()
 
+#すべての関節の回転速度を0にする
+for value in hinge_joints:
+    value.setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
+    value.setParam(ode.ParamFMax, 1000)  # max力
 
-hinge_joint1.setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
-hinge_joint1.setParam(ode.ParamFMax, 1000)  # max力
-hinge_joint2.setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
-hinge_joint2.setParam(ode.ParamFMax, 1000)  # max力
-hinge_joint3.setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
-hinge_joint3.setParam(ode.ParamFMax, 1000)  # max力
-hinge_joint4.setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
-hinge_joint4.setParam(ode.ParamFMax, 1000)  # max力
-hinge_joint5.setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
-hinge_joint5.setParam(ode.ParamFMax, 1000)  # max力
-hinge_joint6.setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
-hinge_joint6.setParam(ode.ParamFMax, 1000)  # max力
 
 # keyboard callback
 def _keyfunc (c, x, y):
@@ -827,42 +819,42 @@ def _idlefunc ():
             counter = 549
             grip_counter = 0
         #手首を曲げる
-        hinge_joint3.setParam(ode.ParamVel, -0.3)  # 速度
-        hinge_joint3.setParam(ode.ParamFMax, 200)  # max力   
+        hinge_joints[3].setParam(ode.ParamVel, -0.3)  # 速度
+        hinge_joints[3].setParam(ode.ParamFMax, 200)  # max力   
         #手首をストップ
-        if hinge_joint3.getAngle() < -1.57:
-            hinge_joint3.setParam(ode.ParamVel, 0.0)  # 速度
-            hinge_joint3.setParam(ode.ParamFMax, 200)  # max力   
+        if hinge_joints[3].getAngle() < -1.57:
+            hinge_joints[3].setParam(ode.ParamVel, 0.0)  # 速度
+            hinge_joints[3].setParam(ode.ParamFMax, 200)  # max力   
 
     #アームの腕を曲げる。まっすぐ戻る。
     if counter==300:
-        hinge_joint1.setParam(ode.ParamVel, 0.3)  # 速度
-        hinge_joint1.setParam(ode.ParamFMax, 200)  # max力       
-        hinge_joint2.setParam(ode.ParamVel, -0.6)  # 速度
-        hinge_joint2.setParam(ode.ParamFMax, 100)  # max力
-        hinge_joint3.setParam(ode.ParamVel, 0.3)  # 速度
-        hinge_joint3.setParam(ode.ParamFMax, 200)  # max力   
+        hinge_joints[1].setParam(ode.ParamVel, 0.3)  # 速度
+        hinge_joints[1].setParam(ode.ParamFMax, 200)  # max力       
+        hinge_joints[2].setParam(ode.ParamVel, -0.6)  # 速度
+        hinge_joints[2].setParam(ode.ParamFMax, 100)  # max力
+        hinge_joints[3].setParam(ode.ParamVel, 0.3)  # 速度
+        hinge_joints[3].setParam(ode.ParamFMax, 200)  # max力   
  
     #アームの腕を上限まで曲げた状態で、根本の回転をストップ。
-    if counter < 550 and hinge_joint1.getAngle() > 1.45 :
-        hinge_joint1.setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
-        hinge_joint1.setParam(ode.ParamFMax, 1000)  # max力 
-        hinge_joint3.setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
-        hinge_joint3.setParam(ode.ParamFMax, 1000)  # max力         
+    if counter < 550 and hinge_joints[1].getAngle() > 1.45 :
+        hinge_joints[1].setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
+        hinge_joints[1].setParam(ode.ParamFMax, 1000)  # max力 
+        hinge_joints[3].setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
+        hinge_joints[3].setParam(ode.ParamFMax, 1000)  # max力         
 
     #アームの腕を上限まで曲げた状態で、肘の回転をストップ
-    if counter < 550 and hinge_joint2.getAngle() < -2.90 :
-        hinge_joint2.setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
-        hinge_joint2.setParam(ode.ParamFMax, 1000)  # max力 
+    if counter < 550 and hinge_joints[2].getAngle() < -2.90 :
+        hinge_joints[2].setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
+        hinge_joints[2].setParam(ode.ParamFMax, 1000)  # max力 
     
     #アームの腕を伸ばす。直進。
     if counter==550:
-        hinge_joint1.setParam(ode.ParamVel, -0.3)  # 速度
-        hinge_joint1.setParam(ode.ParamFMax, 200)  # max力       
-        hinge_joint2.setParam(ode.ParamVel, 0.6)  # 速度
-        hinge_joint2.setParam(ode.ParamFMax, 200)  # max力
-        hinge_joint3.setParam(ode.ParamVel, -0.3)  # 速度
-        hinge_joint3.setParam(ode.ParamFMax, 200)  # max力
+        hinge_joints[1].setParam(ode.ParamVel, -0.3)  # 速度
+        hinge_joints[1].setParam(ode.ParamFMax, 200)  # max力       
+        hinge_joints[2].setParam(ode.ParamVel, 0.6)  # 速度
+        hinge_joints[2].setParam(ode.ParamFMax, 200)  # max力
+        hinge_joints[3].setParam(ode.ParamVel, -0.3)  # 速度
+        hinge_joints[3].setParam(ode.ParamFMax, 200)  # max力
         
     #アーム発進。
     if counter>550:
@@ -875,101 +867,101 @@ def _idlefunc ():
             grip_counter = 200
         #下降
         if display_image_recognition() == 1 and y > 0.25 and grip_counter == 0:
-            hinge_joint1.setParam(ode.ParamVel, -0.3)  # 速度
-            hinge_joint1.setParam(ode.ParamFMax, 200)  # max力       
-            hinge_joint2.setParam(ode.ParamVel, 0.0 )  # 速度
-            hinge_joint2.setParam(ode.ParamFMax, 200)  # max力
-            hinge_joint3.setParam(ode.ParamVel, 0.3)  # 速度
-            hinge_joint3.setParam(ode.ParamFMax, 200)  # max力  
+            hinge_joints[1].setParam(ode.ParamVel, -0.3)  # 速度
+            hinge_joints[1].setParam(ode.ParamFMax, 200)  # max力       
+            hinge_joints[2].setParam(ode.ParamVel, 0.0 )  # 速度
+            hinge_joints[2].setParam(ode.ParamFMax, 200)  # max力
+            hinge_joints[3].setParam(ode.ParamVel, 0.3)  # 速度
+            hinge_joints[3].setParam(ode.ParamFMax, 200)  # max力  
         #下降をストップ    
         if y <= 0.25 and grip_counter < 200:          
             #下降をストップ
-            hinge_joint1.setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
-            hinge_joint1.setParam(ode.ParamFMax, 200)  # max力       
-            hinge_joint2.setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
-            hinge_joint2.setParam(ode.ParamFMax, 200)  # max力
-            hinge_joint3.setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
-            hinge_joint3.setParam(ode.ParamFMax, 200)  # max力              
+            hinge_joints[1].setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
+            hinge_joints[1].setParam(ode.ParamFMax, 200)  # max力       
+            hinge_joints[2].setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
+            hinge_joints[2].setParam(ode.ParamFMax, 200)  # max力
+            hinge_joints[3].setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
+            hinge_joints[3].setParam(ode.ParamFMax, 200)  # max力              
             grip_counter += 1
         #手先を握る
         if 1 <= grip_counter and grip_counter < 200:           
             #手先を握る
-            hinge_joint5.setParam(ode.ParamVel, 0.6)  # 速度
-            hinge_joint5.setParam(ode.ParamFMax, 400)  # max力
-            hinge_joint6.setParam(ode.ParamVel, -0.6)  # 速度
-            hinge_joint6.setParam(ode.ParamFMax, 400)  # max力
+            hinge_joints[4].setParam(ode.ParamVel, 0.6)  # 速度
+            hinge_joints[4].setParam(ode.ParamFMax, 400)  # max力
+            hinge_joints[5].setParam(ode.ParamVel, -0.6)  # 速度
+            hinge_joints[5].setParam(ode.ParamFMax, 400)  # max力
             
             #指の接触センサー
             if grip_counter > 1:
                 #指が押し返されたかどうかを判定
-                if hinge_joint5.getAngleRate() < 0 or hinge_joint6.getAngleRate() > 0:
+                if hinge_joints[4].getAngleRate() < 0 or hinge_joints[5].getAngleRate() > 0:
                     #指が押し返されたら片方の指を固定
-                    hinge_joint6.setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
-                    hinge_joint6.setParam(ode.ParamFMax, 1000)  # max力   
+                    hinge_joints[5].setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
+                    hinge_joints[5].setParam(ode.ParamFMax, 1000)  # max力   
         
             grip_counter += 1
         #握った手先を固定
         if grip_counter == 200:        
             #握った手先を固定
-            hinge_joint5.setParam(ode.ParamVel, 0.0)  # 
-            hinge_joint5.setParam(ode.ParamFMax, 1000)  # max力
-            hinge_joint6.setParam(ode.ParamVel, 0.0)  # 
-            hinge_joint6.setParam(ode.ParamFMax, 1000)  # max力   
+            hinge_joints[4].setParam(ode.ParamVel, 0.0)  # 
+            hinge_joints[4].setParam(ode.ParamFMax, 1000)  # max力
+            hinge_joints[5].setParam(ode.ParamVel, 0.0)  # 
+            hinge_joints[5].setParam(ode.ParamFMax, 1000)  # max力   
 
         #上昇
         if y <= 0.5 and grip_counter == 200:
             #上昇
-            hinge_joint1.setParam(ode.ParamVel, 0.3)  # 
-            hinge_joint1.setParam(ode.ParamFMax, 200)  # max力       
-            hinge_joint2.setParam(ode.ParamVel, 0.0)  # 
-            hinge_joint2.setParam(ode.ParamFMax, 200)  # max力
-            hinge_joint3.setParam(ode.ParamVel, -0.3)  # 
-            hinge_joint3.setParam(ode.ParamFMax, 200)  # max力  
+            hinge_joints[1].setParam(ode.ParamVel, 0.3)  # 
+            hinge_joints[1].setParam(ode.ParamFMax, 200)  # max力       
+            hinge_joints[2].setParam(ode.ParamVel, 0.0)  # 
+            hinge_joints[2].setParam(ode.ParamFMax, 200)  # max力
+            hinge_joints[3].setParam(ode.ParamVel, -0.3)  # 
+            hinge_joints[3].setParam(ode.ParamFMax, 200)  # max力  
 
         #アームの上昇終了判定フラグを立てる
         if y > 0.5 and grip_counter == 200:
             rise_flag = 1
         #上昇終了。まっすぐ戻る。
         if rise_flag == 1 and grip_counter == 200:               
-            hinge_joint1.setParam(ode.ParamVel, 0.3)  # 速度をゼロに設定
-            hinge_joint1.setParam(ode.ParamFMax, 200)  # max力       
-            hinge_joint2.setParam(ode.ParamVel, -0.6)  # 速度をゼロに設定
-            hinge_joint2.setParam(ode.ParamFMax, 200)  # max力 
-            hinge_joint3.setParam(ode.ParamVel, 0.3)  # 速度
-            hinge_joint3.setParam(ode.ParamFMax, 200)  # max力  
+            hinge_joints[1].setParam(ode.ParamVel, 0.3)  # 速度をゼロに設定
+            hinge_joints[1].setParam(ode.ParamFMax, 200)  # max力       
+            hinge_joints[2].setParam(ode.ParamVel, -0.6)  # 速度をゼロに設定
+            hinge_joints[2].setParam(ode.ParamFMax, 200)  # max力 
+            hinge_joints[3].setParam(ode.ParamVel, 0.3)  # 速度
+            hinge_joints[3].setParam(ode.ParamFMax, 200)  # max力  
         #アームの腕を上限まで曲げた状態で、根本の回転をストップ。
-        if hinge_joint1.getAngle() > 1.45 and grip_counter == 200:
-            hinge_joint1.setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
-            hinge_joint1.setParam(ode.ParamFMax, 1000)  # max力
-            hinge_joint3.setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
-            hinge_joint3.setParam(ode.ParamFMax, 1000)  # max力                  
+        if hinge_joints[1].getAngle() > 1.45 and grip_counter == 200:
+            hinge_joints[1].setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
+            hinge_joints[1].setParam(ode.ParamFMax, 1000)  # max力
+            hinge_joints[3].setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
+            hinge_joints[3].setParam(ode.ParamFMax, 1000)  # max力                  
         #アームの腕を上限まで曲げた状態で、肘の回転をストップ。
-        if hinge_joint2.getAngle() < -2.90 and grip_counter == 200:
-            hinge_joint2.setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
-            hinge_joint2.setParam(ode.ParamFMax, 1000)  # max力 
+        if hinge_joints[2].getAngle() < -2.90 and grip_counter == 200:
+            hinge_joints[2].setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
+            hinge_joints[2].setParam(ode.ParamFMax, 1000)  # max力 
             #手先の指を離す
-            hinge_joint5.setParam(ode.ParamVel, -1.0)  # 
-            hinge_joint5.setParam(ode.ParamFMax, 200)  # max力
-            hinge_joint6.setParam(ode.ParamVel, 1.0)  # 
-            hinge_joint6.setParam(ode.ParamFMax, 200)  # max力
+            hinge_joints[4].setParam(ode.ParamVel, -1.0)  # 
+            hinge_joints[4].setParam(ode.ParamFMax, 200)  # max力
+            hinge_joints[5].setParam(ode.ParamVel, 1.0)  # 
+            hinge_joints[5].setParam(ode.ParamFMax, 200)  # max力
             #手先の指をストップ
-            if hinge_joint5.getAngle() < -0.02:
-                hinge_joint5.setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
-                hinge_joint5.setParam(ode.ParamFMax, 200)  # max力    
-            if  0.02 < hinge_joint6.getAngle():
-                hinge_joint6.setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
-                hinge_joint6.setParam(ode.ParamFMax, 200)  # max力
+            if hinge_joints[4].getAngle() < -0.02:
+                hinge_joints[4].setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
+                hinge_joints[4].setParam(ode.ParamFMax, 200)  # max力    
+            if  0.02 < hinge_joints[5].getAngle():
+                hinge_joints[5].setParam(ode.ParamVel, 0.0)  # 速度をゼロに設定
+                hinge_joints[5].setParam(ode.ParamFMax, 200)  # max力
             #手先の指がストップしているとき、台座を回す
-            if hinge_joint5.getAngle() < -0.02 and hinge_joint6.getAngle() > 0.02:
+            if hinge_joints[4].getAngle() < -0.02 and hinge_joints[5].getAngle() > 0.02:
                 #手首の座標が一番遠くに行っていれば、台座を回す
                 if base_rotation_flag == 1:
                     base_rotation_counter += 1
-                    hinge_joint4.setParam(ode.ParamVel, 0.6)  # 速度
-                    hinge_joint4.setParam(ode.ParamFMax, 1000)  # max力
+                    hinge_joints[0].setParam(ode.ParamVel, 0.6)  # 速度
+                    hinge_joints[0].setParam(ode.ParamFMax, 1000)  # max力
                     #台座を止める
                     if base_rotation_counter == 300: 
-                        hinge_joint4.setParam(ode.ParamVel, 0.0)  # 速度
-                        hinge_joint4.setParam(ode.ParamFMax, 1000)  # max力
+                        hinge_joints[0].setParam(ode.ParamVel, 0.0)  # 速度
+                        hinge_joints[0].setParam(ode.ParamFMax, 1000)  # max力
                         base_rotation_flag = 0
                         base_rotation_counter = 0
                         #カウンターを最初に戻す
