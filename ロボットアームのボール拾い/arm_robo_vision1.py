@@ -613,7 +613,7 @@ hinge_joints[1].setAxis((0, 0, 1))    # 回転軸を設定
 #2:腕2
 drop_box_robo(0.9, 0.1, 0.1, -1.8, 0.5, 0.0, 1.0, 0.0)  #(lx, ly, lz, px, py, pz, density, y_rotation)
 hinge_joints.append(ode.HingeJoint(world))
-hinge_joints[2].attach(bodies_robo[1], bodies_robo[2])  # 台座1と腕2を接続
+hinge_joints[2].attach(bodies_robo[1], bodies_robo[2])  # 腕1と腕2を接続
 hinge_joints[2].setAnchor((-1.25, 0.51, 0.0))  # Set the anchor point (hinge location)
 hinge_joints[2].setAxis((0, 0, 1))    # 回転軸を設定
 #3:手首
