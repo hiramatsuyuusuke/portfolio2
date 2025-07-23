@@ -23,6 +23,7 @@ uniform mat4 projection;
 
 out vec3 FragPos;
 out vec3 Normal;
+//flat out vec3 Normal;
 
 void main()
 {
@@ -39,6 +40,7 @@ fragment_shader_source = """
 
 in vec3 FragPos;
 in vec3 Normal;
+//flat in vec3 Normal;
 
 out vec4 FragColor;
 
@@ -258,48 +260,135 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
                         [R[3], R[4], R[5]],
                         [R[6], R[7], R[8]]])
         #法線の変換に使う逆転置行列
-        normalMatrix = np.transpose(np.linalg.inv(rot2))        
+        normalMatrix = np.transpose(np.linalg.inv(rot2))
 
         #頂点座標の回転変換
+        # back face
         v0 = np.array([-lx,-ly,-lz,1])     #回転前の頂点座標
-        n0 = np.array([-1,-1,-1])        #回転前の頂点の法線
+        n0 = np.array([0,0,-1])        #回転前の頂点の法線
         vpx0,vpy0,vpz0,vpa0=np.dot(rot,v0) #回転後の頂点座標
-        nx0,ny0,nz0=normalize_vector(np.dot(normalMatrix,n0))    #回転後の頂点の法線
+        nx0,ny0,nz0=normalize_vector(np.dot(normalMatrix,n0))     #回転後の頂点の法線
 
-        v1 = np.array([lx,-ly,-lz,1])
-        n1 = np.array([1,-1,-1])    
+        v1 = np.array([lx,-ly,-lz,1]) 
+        n1 = np.array([0,0,-1])    
         vpx1,vpy1,vpz1,vpa1=np.dot(rot,v1)
-        nx1,ny1,nz1=normalize_vector(np.dot(normalMatrix,n1))   
+        nx1,ny1,nz1=normalize_vector(np.dot(normalMatrix,n1))        
 
-        v2 = np.array([lx,ly,-lz,1])
-        n2 = np.array([1,1,-1])    
+        v2 = np.array([lx,ly,-lz,1])  
+        n2 = np.array([0,0,-1])  
         vpx2,vpy2,vpz2,vpa2=np.dot(rot,v2)
         nx2,ny2,nz2=normalize_vector(np.dot(normalMatrix,n2))
 
         v3 = np.array([-lx,ly,-lz,1])
-        n3 = np.array([-1,1,-1])       
+        n3 = np.array([0,0,-1])    
         vpx3,vpy3,vpz3,vpa3=np.dot(rot,v3)
         nx3,ny3,nz3=normalize_vector(np.dot(normalMatrix,n3))
 
-        v4 = np.array([-lx,-ly,lz,1])
-        n4 = np.array([-1,-1,1])    
+        # front face
+        v4 = np.array([-lx,-ly,lz,1]) 
+        n4 = np.array([0,0,1])  
         vpx4,vpy4,vpz4,vpa4=np.dot(rot,v4)
         nx4,ny4,nz4=normalize_vector(np.dot(normalMatrix,n4))
 
-        v5 = np.array([lx,-ly,lz,1])
-        n5 = np.array([1,-1,1])    
+        v5 = np.array([lx,-ly,lz,1]) 
+        n5 = np.array([0,0,1])    
         vpx5,vpy5,vpz5,vpa5=np.dot(rot,v5)
         nx5,ny5,nz5=normalize_vector(np.dot(normalMatrix,n5))
 
         v6 = np.array([lx,ly,lz,1])
-        n6 = np.array([1,1,1])   
+        n6 = np.array([0,0,1])   
         vpx6,vpy6,vpz6,vpa6=np.dot(rot,v6)
         nx6,ny6,nz6=normalize_vector(np.dot(normalMatrix,n6))
 
-        v7 = np.array([-lx,ly,lz,1])
-        n7 = np.array([-1,1,1])    
+        v7 = np.array([-lx,ly,lz,1]) 
+        n7 = np.array([0,0,1])   
         vpx7,vpy7,vpz7,vpa7=np.dot(rot,v7)
         nx7,ny7,nz7=normalize_vector(np.dot(normalMatrix,n7))
+
+        # bottom face
+        v8 = np.array([-lx,-ly,lz,1]) 
+        n8 = np.array([0,-1,0])  
+        vpx8,vpy8,vpz8,vpa8=np.dot(rot,v8)
+        nx8,ny8,nz8=normalize_vector(np.dot(normalMatrix,n8))
+
+        v9 = np.array([lx,-ly,lz,1]) 
+        n9 = np.array([0,-1,0])    
+        vpx9,vpy9,vpz9,vpa9=np.dot(rot,v9)
+        nx9,ny9,nz9=normalize_vector(np.dot(normalMatrix,n9))
+
+        v10 = np.array([lx,-ly,-lz,1])
+        n10 = np.array([0,-1,0])   
+        vpx10,vpy10,vpz10,vpa10=np.dot(rot,v10)
+        nx10,ny10,nz10=normalize_vector(np.dot(normalMatrix,n10))
+
+        v11 = np.array([-lx,-ly,-lz,1]) 
+        n11 = np.array([0,-1,0])   
+        vpx11,vpy11,vpz11,vpa11=np.dot(rot,v11)
+        nx11,ny11,nz11=normalize_vector(np.dot(normalMatrix,n11))
+
+        # top face
+        v12 = np.array([lx,ly,lz,1]) 
+        n12 = np.array([0,1,0])  
+        vpx12,vpy12,vpz12,vpa12=np.dot(rot,v12)
+        nx12,ny12,nz12=normalize_vector(np.dot(normalMatrix,n12))
+
+        v13 = np.array([-lx,ly,lz,1]) 
+        n13 = np.array([0,1,0])    
+        vpx13,vpy13,vpz13,vpa13=np.dot(rot,v13)
+        nx13,ny13,nz13=normalize_vector(np.dot(normalMatrix,n13))
+
+        v14 = np.array([-lx,ly,-lz,1])
+        n14 = np.array([0,1,0])   
+        vpx14,vpy14,vpz14,vpa14=np.dot(rot,v14)
+        nx14,ny14,nz14=normalize_vector(np.dot(normalMatrix,n14))
+
+        v15 = np.array([lx,ly,-lz,1]) 
+        n15 = np.array([0,1,0])   
+        vpx15,vpy15,vpz15,vpa15=np.dot(rot,v15)
+        nx15,ny15,nz15=normalize_vector(np.dot(normalMatrix,n15))
+
+        # left face
+        v16 = np.array([-lx,-ly,lz,1]) 
+        n16 = np.array([-1,0,0])  
+        vpx16,vpy16,vpz16,vpa16=np.dot(rot,v16)
+        nx16,ny16,nz16=normalize_vector(np.dot(normalMatrix,n16))
+
+        v17 = np.array([-lx,ly,lz,1]) 
+        n17 = np.array([-1,0,0])    
+        vpx17,vpy17,vpz17,vpa17=np.dot(rot,v17)
+        nx17,ny17,nz17=normalize_vector(np.dot(normalMatrix,n17))
+
+        v18 = np.array([-lx,ly,-lz,1])
+        n18 = np.array([-1,0,0])   
+        vpx18,vpy18,vpz18,vpa18=np.dot(rot,v18)
+        nx18,ny18,nz18=normalize_vector(np.dot(normalMatrix,n18))
+
+        v19 = np.array([-lx,-ly,-lz,1]) 
+        n19 = np.array([-1,0,0])   
+        vpx19,vpy19,vpz19,vpa19=np.dot(rot,v19)
+        nx19,ny19,nz19=normalize_vector(np.dot(normalMatrix,n19))
+
+        # right face
+        v20 = np.array([lx,-ly,lz,1]) 
+        n20 = np.array([1,0,0])  
+        vpx20,vpy20,vpz20,vpa20=np.dot(rot,v20)
+        nx20,ny20,nz20=normalize_vector(np.dot(normalMatrix,n20))
+
+        v21 = np.array([lx,ly,lz,1]) 
+        n21 = np.array([1,0,0])    
+        vpx21,vpy21,vpz21,vpa21=np.dot(rot,v21)
+        nx21,ny21,nz21=normalize_vector(np.dot(normalMatrix,n21))
+
+        v22 = np.array([lx,ly,-lz,1])
+        n22 = np.array([1,0,0])   
+        vpx22,vpy22,vpz22,vpa22=np.dot(rot,v22)
+        nx22,ny22,nz22=normalize_vector(np.dot(normalMatrix,n22))
+
+        v23 = np.array([lx,-ly,-lz,1]) 
+        n23 = np.array([1,0,0])   
+        vpx23,vpy23,vpz23,vpa23=np.dot(rot,v23)
+        nx23,ny23,nz23=normalize_vector(np.dot(normalMatrix,n23))
+
 
         px,py,pz = b.getPosition()
         # Cube vertices and normals (position XYZ + normals)
@@ -312,20 +401,36 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
             vpx4 + px, vpy4 + py, vpz4 + pz,    nx4,ny4,nz4,  # 4
             vpx5 + px, vpy5 + py, vpz5 + pz,    nx5,ny5,nz5,  # 5
             vpx6 + px, vpy6 + py, vpz6 + pz,    nx6,ny6,nz6,  # 6
-            vpx7 + px, vpy7 + py, vpz7 + pz,    nx7,ny7,nz7   # 7
+            vpx7 + px, vpy7 + py, vpz7 + pz,    nx7,ny7,nz7,   # 7
+            vpx8 + px, vpy8 + py, vpz8 + pz,    nx8,ny8,nz8,  # 8
+            vpx9 + px, vpy9 + py, vpz9 + pz,    nx9,ny9,nz9,  # 9
+            vpx10 + px, vpy10 + py, vpz10 + pz,    nx10,ny10,nz10,  # 10
+            vpx11 + px, vpy11 + py, vpz11 + pz,    nx11,ny11,nz11,  # 11
+            vpx12 + px, vpy12 + py, vpz12 + pz,    nx12,ny12,nz12,  # 12
+            vpx13 + px, vpy13 + py, vpz13 + pz,    nx13,ny13,nz13,  # 13
+            vpx14 + px, vpy14 + py, vpz14 + pz,    nx14,ny14,nz14,  # 14
+            vpx15 + px, vpy15 + py, vpz15 + pz,    nx15,ny15,nz15,  # 15 
+            vpx16 + px, vpy16 + py, vpz16 + pz,    nx16,ny16,nz16,  # 16
+            vpx17 + px, vpy17 + py, vpz17 + pz,    nx17,ny17,nz17,  # 17
+            vpx18 + px, vpy18 + py, vpz18 + pz,    nx18,ny18,nz18,  # 18
+            vpx19 + px, vpy19 + py, vpz19 + pz,    nx19,ny19,nz19,  # 19
+            vpx20 + px, vpy20 + py, vpz20 + pz,    nx20,ny20,nz20,  # 20
+            vpx21 + px, vpy21 + py, vpz21 + pz,    nx21,ny21,nz21,  # 21
+            vpx22 + px, vpy22 + py, vpz22 + pz,    nx22,ny22,nz22,  # 22
+            vpx23 + px, vpy23 + py, vpz23 + pz,    nx23,ny23,nz23   # 23
         ], dtype=np.float32)
 
         vertices = np.append(vertices, arr)
         
-        i = index*8
+        i = index*24
         # Indices defining the 12 triangles composing the cube
         arr2 = np.array([
             0+i,1+i,2+i, 2+i,3+i,0+i,  # back face
             4+i,5+i,6+i, 6+i,7+i,4+i,  # front face
-            4+i,5+i,1+i, 1+i,0+i,4+i,  # bottom face
-            6+i,7+i,3+i, 3+i,2+i,6+i,  # top face
-            4+i,7+i,3+i, 3+i,0+i,4+i,  # left face
-            5+i,6+i,2+i, 2+i,1+i,5+i   # right face
+            8+i,9+i,10+i, 10+i,11+i,8+i,  # bottom face
+            12+i,13+i,14+i, 14+i,15+i,12+i,  # top face
+            16+i,17+i,18+i, 18+i,19+i,16+i,  # left face
+            20+i,21+i,22+i, 22+i,23+i,20+i   # right face
         ], dtype=np.uint32)
 
         indices = np.append(indices, arr2)
