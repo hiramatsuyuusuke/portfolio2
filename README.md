@@ -10,4 +10,10 @@ PyODEを用いた制作物2
 PyODEの物理演算+深層学習(ResNet18) : ロボットビジョン2  「ロボットアームのボール拾い」  
 https://hiramatsuyuusuke.github.io/portfolio2/product2.html
 
+PyODEを用いた制作物3  
+PyODEのtutorial3.pyのコードをGLFWに変更してシェーダーで描画  
+https://hiramatsuyuusuke.github.io/portfolio2/product3.html
+
+
+
 hjkudnheinvghgf
