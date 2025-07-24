@@ -96,6 +96,100 @@ def create_shader_program():
     glDeleteShader(fragment_shader)
     return program
 
+# シェーダー用の頂点データと法線データを作成
+def draw_body(body, body_index, vertices, indices):
+    """Draw an ODE body.
+    """
+    #boxの頂点座標の計算
+    lx,ly,lz = body.boxsize
+    lx = lx * 0.5
+    ly = ly * 0.5
+    lz = lz * 0.5                
+    #回転行列
+    R = body.getRotation()
+    rot = np.array([[R[0], R[1], R[2], 0.0],
+                    [R[3], R[4], R[5], 0.0],
+                    [R[6], R[7], R[8], 0.0],
+                    [   0,    0,    0, 1.0]])
+    #回転行列
+    rot2 = np.array([[R[0], R[1], R[2]],
+                    [R[3], R[4], R[5]],
+                    [R[6], R[7], R[8]]])
+    #法線の変換に使う逆転置行列
+    normalMatrix = np.transpose(np.linalg.inv(rot2))        
+
+    #頂点座標の回転変換
+    v0 = np.array([-lx,-ly,-lz,1])     #回転前の頂点座標
+    n0 = np.array([-1,-1,-1])        #回転前の頂点の法線
+    vpx0,vpy0,vpz0,vpa0=np.dot(rot,v0) #回転後の頂点座標
+    nx0,ny0,nz0=normalize_vector(np.dot(normalMatrix,n0))    #回転後の頂点の法線
+
+    v1 = np.array([lx,-ly,-lz,1])
+    n1 = np.array([1,-1,-1])    
+    vpx1,vpy1,vpz1,vpa1=np.dot(rot,v1)
+    nx1,ny1,nz1=normalize_vector(np.dot(normalMatrix,n1))   
+
+    v2 = np.array([lx,ly,-lz,1])
+    n2 = np.array([1,1,-1])    
+    vpx2,vpy2,vpz2,vpa2=np.dot(rot,v2)
+    nx2,ny2,nz2=normalize_vector(np.dot(normalMatrix,n2))
+
+    v3 = np.array([-lx,ly,-lz,1])
+    n3 = np.array([-1,1,-1])       
+    vpx3,vpy3,vpz3,vpa3=np.dot(rot,v3)
+    nx3,ny3,nz3=normalize_vector(np.dot(normalMatrix,n3))
+
+    v4 = np.array([-lx,-ly,lz,1])
+    n4 = np.array([-1,-1,1])    
+    vpx4,vpy4,vpz4,vpa4=np.dot(rot,v4)
+    nx4,ny4,nz4=normalize_vector(np.dot(normalMatrix,n4))
+
+    v5 = np.array([lx,-ly,lz,1])
+    n5 = np.array([1,-1,1])    
+    vpx5,vpy5,vpz5,vpa5=np.dot(rot,v5)
+    nx5,ny5,nz5=normalize_vector(np.dot(normalMatrix,n5))
+
+    v6 = np.array([lx,ly,lz,1])
+    n6 = np.array([1,1,1])   
+    vpx6,vpy6,vpz6,vpa6=np.dot(rot,v6)
+    nx6,ny6,nz6=normalize_vector(np.dot(normalMatrix,n6))
+
+    v7 = np.array([-lx,ly,lz,1])
+    n7 = np.array([-1,1,1])    
+    vpx7,vpy7,vpz7,vpa7=np.dot(rot,v7)
+    nx7,ny7,nz7=normalize_vector(np.dot(normalMatrix,n7))
+
+    px,py,pz = body.getPosition()
+    # Cube vertices and normals (position XYZ + normals)
+    arr = np.array([
+        # positions                         # normals
+        vpx0 + px, vpy0 + py, vpz0 + pz,    nx0,ny0,nz0,  # 0
+        vpx1 + px, vpy1 + py, vpz1 + pz,    nx1,ny1,nz1,  # 1
+        vpx2 + px, vpy2 + py, vpz2 + pz,    nx2,ny2,nz2,  # 2
+        vpx3 + px, vpy3 + py, vpz3 + pz,    nx3,ny3,nz3,  # 3
+        vpx4 + px, vpy4 + py, vpz4 + pz,    nx4,ny4,nz4,  # 4
+        vpx5 + px, vpy5 + py, vpz5 + pz,    nx5,ny5,nz5,  # 5
+        vpx6 + px, vpy6 + py, vpz6 + pz,    nx6,ny6,nz6,  # 6
+        vpx7 + px, vpy7 + py, vpz7 + pz,    nx7,ny7,nz7   # 7
+    ], dtype=np.float32)
+
+    vertices_result = np.append(vertices, arr)
+    
+    i = body_index*8
+    # Indices defining the 12 triangles composing the cube
+    arr2 = np.array([
+        0+i,1+i,2+i, 2+i,3+i,0+i,  # back face
+        4+i,5+i,6+i, 6+i,7+i,4+i,  # front face
+        4+i,5+i,1+i, 1+i,0+i,4+i,  # bottom face
+        6+i,7+i,3+i, 3+i,2+i,6+i,  # top face
+        4+i,7+i,3+i, 3+i,0+i,4+i,  # left face
+        5+i,6+i,2+i, 2+i,1+i,5+i   # right face
+    ], dtype=np.uint32)
+
+    indicess_result = np.append(indices, arr2)
+
+    return vertices_result, indicess_result
+
 # geometric utility functions
 def scalp (vec, scal):
     vec[0] *= scal
@@ -240,96 +334,10 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     vertices = np.array([], dtype=np.float32)
     indices = np.array([], dtype=np.uint32)
 
+    #bodyの頂点データを作成
     for index, b in enumerate(bodies):
-
-        #boxの頂点座標の計算
-        lx,ly,lz = b.boxsize
-        lx = lx * 0.5
-        ly = ly * 0.5
-        lz = lz * 0.5                
-        #回転行列
-        R = b.getRotation()
-        rot = np.array([[R[0], R[1], R[2], 0.0],
-                        [R[3], R[4], R[5], 0.0],
-                        [R[6], R[7], R[8], 0.0],
-                        [   0,    0,    0, 1.0]])
-        #回転行列
-        rot2 = np.array([[R[0], R[1], R[2]],
-                        [R[3], R[4], R[5]],
-                        [R[6], R[7], R[8]]])
-        #法線の変換に使う逆転置行列
-        normalMatrix = np.transpose(np.linalg.inv(rot2))        
-
-        #頂点座標の回転変換
-        v0 = np.array([-lx,-ly,-lz,1])     #回転前の頂点座標
-        n0 = np.array([-1,-1,-1])        #回転前の頂点の法線
-        vpx0,vpy0,vpz0,vpa0=np.dot(rot,v0) #回転後の頂点座標
-        nx0,ny0,nz0=normalize_vector(np.dot(normalMatrix,n0))    #回転後の頂点の法線
-
-        v1 = np.array([lx,-ly,-lz,1])
-        n1 = np.array([1,-1,-1])    
-        vpx1,vpy1,vpz1,vpa1=np.dot(rot,v1)
-        nx1,ny1,nz1=normalize_vector(np.dot(normalMatrix,n1))   
-
-        v2 = np.array([lx,ly,-lz,1])
-        n2 = np.array([1,1,-1])    
-        vpx2,vpy2,vpz2,vpa2=np.dot(rot,v2)
-        nx2,ny2,nz2=normalize_vector(np.dot(normalMatrix,n2))
-
-        v3 = np.array([-lx,ly,-lz,1])
-        n3 = np.array([-1,1,-1])       
-        vpx3,vpy3,vpz3,vpa3=np.dot(rot,v3)
-        nx3,ny3,nz3=normalize_vector(np.dot(normalMatrix,n3))
-
-        v4 = np.array([-lx,-ly,lz,1])
-        n4 = np.array([-1,-1,1])    
-        vpx4,vpy4,vpz4,vpa4=np.dot(rot,v4)
-        nx4,ny4,nz4=normalize_vector(np.dot(normalMatrix,n4))
-
-        v5 = np.array([lx,-ly,lz,1])
-        n5 = np.array([1,-1,1])    
-        vpx5,vpy5,vpz5,vpa5=np.dot(rot,v5)
-        nx5,ny5,nz5=normalize_vector(np.dot(normalMatrix,n5))
-
-        v6 = np.array([lx,ly,lz,1])
-        n6 = np.array([1,1,1])   
-        vpx6,vpy6,vpz6,vpa6=np.dot(rot,v6)
-        nx6,ny6,nz6=normalize_vector(np.dot(normalMatrix,n6))
-
-        v7 = np.array([-lx,ly,lz,1])
-        n7 = np.array([-1,1,1])    
-        vpx7,vpy7,vpz7,vpa7=np.dot(rot,v7)
-        nx7,ny7,nz7=normalize_vector(np.dot(normalMatrix,n7))
-
-        px,py,pz = b.getPosition()
-        # Cube vertices and normals (position XYZ + normals)
-        arr = np.array([
-            # positions                         # normals
-            vpx0 + px, vpy0 + py, vpz0 + pz,    nx0,ny0,nz0,  # 0
-            vpx1 + px, vpy1 + py, vpz1 + pz,    nx1,ny1,nz1,  # 1
-            vpx2 + px, vpy2 + py, vpz2 + pz,    nx2,ny2,nz2,  # 2
-            vpx3 + px, vpy3 + py, vpz3 + pz,    nx3,ny3,nz3,  # 3
-            vpx4 + px, vpy4 + py, vpz4 + pz,    nx4,ny4,nz4,  # 4
-            vpx5 + px, vpy5 + py, vpz5 + pz,    nx5,ny5,nz5,  # 5
-            vpx6 + px, vpy6 + py, vpz6 + pz,    nx6,ny6,nz6,  # 6
-            vpx7 + px, vpy7 + py, vpz7 + pz,    nx7,ny7,nz7   # 7
-        ], dtype=np.float32)
-
-        vertices = np.append(vertices, arr)
-        
-        i = index*8
-        # Indices defining the 12 triangles composing the cube
-        arr2 = np.array([
-            0+i,1+i,2+i, 2+i,3+i,0+i,  # back face
-            4+i,5+i,6+i, 6+i,7+i,4+i,  # front face
-            4+i,5+i,1+i, 1+i,0+i,4+i,  # bottom face
-            6+i,7+i,3+i, 3+i,2+i,6+i,  # top face
-            4+i,7+i,3+i, 3+i,0+i,4+i,  # left face
-            5+i,6+i,2+i, 2+i,1+i,5+i   # right face
-        ], dtype=np.uint32)
-
-        indices = np.append(indices, arr2)
-    
+        vertices, indices = draw_body(b, index, vertices, indices)
+ 
     glBindVertexArray(VAO)
 
     # Vertex buffer
