@@ -1,4 +1,4 @@
-#ODE-0.16.4のtutorial3.pyを書き換えたコードです。法線方向の回転変換のやり方にミスがあると思います。
+#ODE-0.16.4のtutorial3.pyを書き換えたコードです。
 #https://hiramatsuyuusuke.github.io/portfolio2/product3.html
 
 import sys, os, random, time
