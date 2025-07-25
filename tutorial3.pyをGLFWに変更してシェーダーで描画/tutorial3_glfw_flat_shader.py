@@ -387,7 +387,7 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(0))
     glEnableVertexAttribArray(0)
 
-    # Color attribute
+    # normal attribute
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(3 * vertices.itemsize))
     glEnableVertexAttribArray(1)
 
