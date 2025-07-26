@@ -67,7 +67,7 @@ void main()
     float diff = max(dot(norm, lightDirection), 0.0);
 
     // 環境光のみ簡易実装
-    vec3 ambient = 0.5 * lightColor;
+    vec3 ambient = 0.95 * lightColor;
 
     // 拡散光強度分だけ色乗算
     vec3 diffuse = diff * lightColor;
@@ -436,7 +436,7 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
 
     vertices = np.array([], dtype=np.float32)
     indices = np.array([], dtype=np.uint32)
-
+    #odeのボディオブジェクト
     for index, b in enumerate(bodies):
         if index < 4:
             #color_r, color_g, color_b = ( 0.5, 0.9, 0.1)
@@ -446,6 +446,45 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
         #bodyの頂点データを作成
         vertices, indices = draw_body(b, index, vertices, indices, color_r, color_g, color_b)
 
+    #床と壁のverticesデータを作成
+                           # positions        # normals        # color
+    floor_arr = np.array([  4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1, #床 0
+                            4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1, #床 1
+                           -4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1, #床 2
+                           -4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1,  #床 3
+
+                           -4.5, 0.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  #壁奥 4
+                            4.5, 0.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  #壁奥 5
+                           -4.5, 2.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  #壁奥 6
+                            4.5, 2.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  #壁奥 7
+
+                           -4.5, 0.0, -4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  #壁左 8
+                           -4.5, 0.0,  4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  #壁左 9
+                           -4.5, 2.0, -4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  #壁左 10
+                           -4.5, 2.0,  4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  #壁左 11
+
+                            4.5, 0.0, -4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  #壁右 12
+                            4.5, 0.0,  4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  #壁右 13
+                            4.5, 2.0, -4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  #壁右 14
+                            4.5, 2.0,  4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  #壁右 15
+
+                           -4.5, 0.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  #壁手前 16
+                            4.5, 0.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  #壁手前 17
+                           -4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  #壁手前 18
+                            4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0   #壁手前 19
+                           ], dtype=np.float32)
+    vertices = np.append(vertices, floor_arr)
+
+    #床と壁のIndicesデータを作成
+    i = max(indices) + 1
+    arr3 = np.array([0+i,1+i,2+i,  3+i,1+i,2+i,  #床
+                     4+i,5+i,6+i,  7+i,5+i,6+i,  #壁奥
+                     8+i,9+i,10+i,  11+i,9+i,10+i,    #壁左
+                     12+i,13+i,14+i,  15+i,13+i,14+i, #壁右
+                     16+i,17+i,18+i,  19+i,17+i,18+i  #壁手前    
+                     ], dtype=np.uint32)
+    indices = np.append(indices, arr3)
+    
 
 
     glBindVertexArray(VAO)
@@ -527,7 +566,7 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     #glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
     glUniformMatrix4fv(proj_loc, 1, GL_FALSE, projection)
     glUniform3f(light_dir_loc, 0.0, -3.0, -1.0)  # ディレクショナルライトの方向例
-    glUniform3f(light_color_loc, 0.7, 0.7, 0.7)  # 白色光
+    glUniform3f(light_color_loc, 1.0, 1.0, 1.0)  # 白色光
     #glUniform3f(object_color_loc, 1.0, 0.5, 0.31) # オブジェクトの色
     #glUniform3f(view_pos_loc, 0.0, 0.0, 3.0)     # カメラ位置例
 
@@ -535,26 +574,23 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     # View matrix (camera)
     glViewport(10, 10, 320, 320)   
     view = np.identity(4, dtype=np.float32)
-    view_angle = 3.14 * 0.1
+    view_angle = 3.14 * 0.3
     c = cos(view_angle)
     s = sin(view_angle)
-
     # Rotation around Y axis
     #view[0, 0] = c
     #view[0, 2] = s
     #view[2, 0] = -s
     #view[2, 2] = c
-
     # Rotation around x axis  
     view[1, 1] = c
     view[1, 2] = s
     view[2, 1] = -s
     view[2, 2] = c
-
     #平行移動
     view[3, 0] = 0.0  # Move on x axis
     view[3, 1] = -1.0  # Move on y axis
-    view[3, 2] = -8.0  # Move on z axis    
+    view[3, 2] = -10.0  # Move on z axis    
     # uniformのセット
     glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
     # Draw cube
@@ -565,10 +601,18 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     # View matrix (camera)
     glViewport(340, 10, 320, 320)    
     view = np.identity(4, dtype=np.float32)
+    view_angle = 3.14 * 0.3
+    c = cos(view_angle)
+    s = sin(view_angle)
+    # Rotation around Y axis
+    view[0, 0] = c
+    view[0, 2] = s
+    view[2, 0] = -s
+    view[2, 2] = c
     #平行移動
     view[3, 0] = 0.0  # Move on x axis
     view[3, 1] = -1.0  # Move on y axis
-    view[3, 2] = -8.0  # Move on z axis
+    view[3, 2] = -3.0  # Move on z axis
     # uniformのセット
     glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)    
     # Draw cube
