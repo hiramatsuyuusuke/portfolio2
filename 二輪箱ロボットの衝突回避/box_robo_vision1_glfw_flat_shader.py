@@ -10,6 +10,7 @@ import numpy as np
 
 import ode
 
+from PIL import Image
 
 # Vertex Shader
 vertex_shader_source = """
@@ -18,6 +19,8 @@ vertex_shader_source = """
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in vec3 color;
+layout(location = 3) in vec3 vertexUV_and_flag;
+
 
 uniform mat4 model;
 uniform mat4 view;
@@ -28,6 +31,9 @@ out vec3 FragPos;
 flat out vec3 Normal;
 out vec3 Color;
 
+out vec3 UV_and_flag;
+
+
 void main()
 {
     FragPos = vec3(model * vec4(position, 1.0));
@@ -35,6 +41,7 @@ void main()
     Normal = normal;
     gl_Position = projection * view * vec4(FragPos, 1.0);
     Color = color;
+    UV_and_flag = vertexUV_and_flag;
 }
 """
 
@@ -55,6 +62,10 @@ uniform vec3 lightColor;
 //uniform vec3 objectColor;
 //uniform vec3 viewPos;
 
+uniform sampler2D texture;
+in vec3 UV_and_flag; // UV座標
+
+
 void main()
 {
     // 法線ベクトルの正規化
@@ -72,9 +83,15 @@ void main()
     // 拡散光強度分だけ色乗算
     vec3 diffuse = diff * lightColor;
 
-    //vec3 result = (ambient + diffuse) * objectColor;
-    vec3 result = (ambient + diffuse) * Color;
-    FragColor = vec4(result, 1.0);
+    if (UV_and_flag[2]<0.5)
+    {
+        vec3 result = (ambient + diffuse) * Color;
+        FragColor = vec4(result, 1.0);
+    }
+    else
+    {
+        FragColor = texture2D(texture, vec2(UV_and_flag[0], UV_and_flag[1]));
+    }
 }
 """
 
@@ -218,7 +235,8 @@ def draw_body(body, body_index, vertices, indices, color_r, color_g, color_b):
     for i in range(24):                                  
         arr2 = np.array([   vpx[i]+px, vpy[i]+py, vpz[i]+pz,    # positions
                             nx[i], ny[i], nz[i],                # normals
-                            color_r, color_g, color_b],         # color
+                            color_r, color_g, color_b,          # color
+                            1.0, 1.0, 0.0],                     #uv and flag
                             dtype=np.float32)
         arr1 = np.append(arr1, arr2)
     vertices_result = np.append(vertices, arr1)
@@ -358,7 +376,20 @@ def near_callback(args, geom1, geom2):
         j = ode.ContactJoint(world, contactgroup, c)
         j.attach(geom1.getBody(), geom2.getBody())
 
+#テクスチャ読み込み関数
+def load_texture(texture_file_name):
 
+    # Generate a texture ID
+    texture_id = glGenTextures(1)
+    glBindTexture(GL_TEXTURE_2D, texture_id )
+
+    img = Image.open(texture_file_name)
+    w, h = img.size
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, img.tobytes())
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)    # Set texture parameters
+    glBindTexture(GL_TEXTURE_2D, 0)  # Unbind texture
+
+    return texture_id
 ######################################################################
 
 # Create a world object
@@ -397,6 +428,10 @@ counter = 0
 objcount = 0
 lasttime = time.time()
 
+
+
+
+
 #boxオブジェクトの初期位置
 init_position.append((  3.8,  0.7,  0.82)) #0 : 机の天板
 init_position.append((  3.3,  0.3,  0.00))    #1 : 机の脚
@@ -434,6 +469,9 @@ for i in range(10):
 #シェーダーで描画
 def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
 
+
+
+
     vertices = np.array([], dtype=np.float32)
     indices = np.array([], dtype=np.uint32)
     #odeのボディオブジェクト
@@ -446,32 +484,33 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
         #bodyの頂点データを作成
         vertices, indices = draw_body(b, index, vertices, indices, color_r, color_g, color_b)
 
+
     #床と壁のverticesデータを作成
-                           # positions        # normals        # color
-    floor_arr = np.array([  4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1, #床 0
-                            4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1, #床 1
-                           -4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1, #床 2
-                           -4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1,  #床 3
+                           # positions        # normals        # color          #uv and flag
+    floor_arr = np.array([  4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1,  4.5, 4.5, 1.0,   #床 0
+                            4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1,  4.5, 0.0, 1.0,   #床 1
+                           -4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1,  0.0, 4.5, 1.0,   #床 2
+                           -4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1,  0.0, 0.0, 1.0,   #床 3
 
-                           -4.5, 0.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  #壁奥 4
-                            4.5, 0.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  #壁奥 5
-                           -4.5, 2.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  #壁奥 6
-                            4.5, 2.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  #壁奥 7
+                           -4.5, 0.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁奥 4
+                            4.5, 0.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁奥 5
+                           -4.5, 2.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁奥 6
+                            4.5, 2.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁奥 7
 
-                           -4.5, 0.0, -4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  #壁左 8
-                           -4.5, 0.0,  4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  #壁左 9
-                           -4.5, 2.0, -4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  #壁左 10
-                           -4.5, 2.0,  4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  #壁左 11
+                           -4.5, 0.0, -4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁左 8
+                           -4.5, 0.0,  4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁左 9
+                           -4.5, 2.0, -4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁左 10
+                           -4.5, 2.0,  4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁左 11
 
-                            4.5, 0.0, -4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  #壁右 12
-                            4.5, 0.0,  4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  #壁右 13
-                            4.5, 2.0, -4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  #壁右 14
-                            4.5, 2.0,  4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  #壁右 15
+                            4.5, 0.0, -4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁右 12
+                            4.5, 0.0,  4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁右 13
+                            4.5, 2.0, -4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁右 14
+                            4.5, 2.0,  4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁右 15
 
-                           -4.5, 0.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  #壁手前 16
-                            4.5, 0.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  #壁手前 17
-                           -4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  #壁手前 18
-                            4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0   #壁手前 19
+                           -4.5, 0.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁手前 16
+                            4.5, 0.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁手前 17
+                           -4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁手前 18
+                            4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0   #壁手前 19
                            ], dtype=np.float32)
     vertices = np.append(vertices, floor_arr)
 
@@ -498,16 +537,21 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.nbytes, indices, GL_STATIC_DRAW)
 
     # Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * vertices.itemsize, ctypes.c_void_p(0))
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 12 * vertices.itemsize, ctypes.c_void_p(0))
     glEnableVertexAttribArray(0)
 
     # normal attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 9 * vertices.itemsize, ctypes.c_void_p(3 * vertices.itemsize))
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 12 * vertices.itemsize, ctypes.c_void_p(3 * vertices.itemsize))
     glEnableVertexAttribArray(1)
 
-    #
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 9 * vertices.itemsize, ctypes.c_void_p(6 * vertices.itemsize))
+    # color attribute
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 12 * vertices.itemsize, ctypes.c_void_p(6 * vertices.itemsize))
     glEnableVertexAttribArray(2)
+
+    # 
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 12 * vertices.itemsize, ctypes.c_void_p(9 * vertices.itemsize))
+    glEnableVertexAttribArray(3)
+
 
     glBindBuffer(GL_ARRAY_BUFFER, 0)
     glBindVertexArray(0)
@@ -646,6 +690,11 @@ def main():
     VBO = glGenBuffers(1)
     EBO = glGenBuffers(1)
 
+
+    #テクスチャ読み込み#
+    tex_floor = load_texture("sample1.png")
+
+
     #物理演算とシェーダのループ部分
     while not glfw.window_should_close(window):
 
@@ -658,18 +707,19 @@ def main():
         glEnable(GL_SCISSOR_TEST)
         #Define the scissor box (x, y, width, height)
         glScissor(10, 10, 320, 320)
-        glClearColor(40.0/255.0, 157.0/222.0, 226.0/255, 1)
+        glClearColor(0.0, 0.0, 0.0, 1)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)     
         #Define the scissor box (x, y, width, height)
         glScissor(340, 10, 320, 320)
-        glClearColor(40.0/255.0, 157.0/222.0, 226.0/255, 1)
+        glClearColor(0.0, 0.0, 0.0, 1)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)   
         #Disable the scissor test when done
         glDisable(GL_SCISSOR_TEST)
 
         #シェーダーで描画
+        glBindTexture(GL_TEXTURE_2D, tex_floor)
         use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO)
-
+        glBindTexture(GL_TEXTURE_2D, 0)  # Unbind texture
 
         #物理演算
         t = dt - (time.time() - lasttime)
