@@ -216,7 +216,10 @@ def draw_body(body, body_index, vertices, indices):
     vertices_result = np.append(vertices, arr1)
     
     # Indices defining the 12 triangles composing the cube
-    i = body_index*24
+    if len(indices) == 0:
+        i = 0
+    else:
+        i = max(indices) + 1
     arr3 = np.array([
         0+i,1+i,2+i, 2+i,3+i,0+i,  # back face
         4+i,5+i,6+i, 6+i,7+i,4+i,  # front face

@@ -251,7 +251,10 @@ def draw_body(body, body_index, vertices, indices, color_r, color_g, color_b):
     vertices_result = np.append(vertices, arr1)
     
     # Indices defining the 12 triangles composing the cube
-    i = body_index*24
+    if len(indices) == 0:
+        i = 0
+    else:
+        i = max(indices) + 1
     arr3 = np.array([
         0+i,1+i,2+i, 2+i,3+i,0+i,  # back face
         4+i,5+i,6+i, 6+i,7+i,4+i,  # front face
@@ -329,7 +332,24 @@ def drop_box( init_shape, init_position, density):
     geoms.append(geom)
     objcount += 1
 
+# drop_box_robo_object
+def drop_box_robo( init_shape, init_position, density):
+    """Drop an object into the scene."""
+    global bodies, geoms, objcount
 
+    lx, ly, lz = init_shape
+    px, py, pz = init_position
+
+    body, geom = create_box(world, space, density, lx, ly, lz)
+    theta = 0
+    body.setPosition( (px, py, pz) )
+    ct = cos (theta)
+    st = sin (theta)
+    body.setRotation([ct, 0., -st, 0., 1., 0., st, 0., ct])#y軸回転
+    #body.setRotation([1., 0., 0., 0., ct, -st, 0., st, ct])#x軸回転 
+    bodies_robo.append(body)
+    geoms_robo.append(geom)
+    objcount += 1
 
 
 # explosion
@@ -415,15 +435,12 @@ floor = ode.GeomPlane(space, (0,1,0), 0)
 
 # A list with ODE bodies
 bodies = []
-#
-init_shape = []
-init_position = []
-#
-fixed_joints=[]
-
+bodies_robo = []
 # The geoms for each of the bodies
 geoms = []
-
+geoms_robo = []
+#
+fixed_joints=[]
 # A joint group for the contact joints that are generated whenever
 # two bodies collide
 contactgroup = ode.JointGroup()
@@ -437,11 +454,14 @@ counter = 0
 objcount = 0
 lasttime = time.time()
 
+# 箱ロボットの初期位置
+box_robo_start_x = 2.0
+box_robo_start_z = 2.0
 
+#box障害物オブジェクトの初期位置
+init_position = []
+init_shape = []
 
-
-
-#boxオブジェクトの初期位置
 init_position.append((  3.8,  0.7,  0.82)) #0 : 机の天板
 init_position.append((  3.3,  0.3,  0.00))    #1 : 机の脚
 init_position.append((  4.3,  0.3,  0.00))    #2 : 机の脚
@@ -452,7 +472,7 @@ init_position.append(( -4.2,  0.5,  0.00))   #6 : 棚の脚
 init_position.append(( -3.2,  0.5,  0.00))   #7 : 棚の脚
 init_position.append(( -3.2,  0.5,  2.00))   #8 : 棚の脚
 init_position.append(( -4.2,  0.5,  2.00))   #9 : 棚の脚
-#boxオブジェクトの初期形状
+#box障害物オブジェクトの初期形状
 init_shape.append(( 1.30, 0.2, 1.70))      #0 : 机の天板
 init_shape.append(( 0.15, 0.6, 0.15))    #1 : 机の脚
 init_shape.append(( 0.15, 0.6, 0.15))    #2 : 机の脚
@@ -469,31 +489,31 @@ for i in range(10):
     #障害物オブジェクトのリストに入れる
     drop_box(init_shape[i], init_position[i], 1000) #drop_box(init_shape[i], init_position[i], density) 
 
-    #障害物オブジェクトの固定ジョイントの作成
+#障害物オブジェクトの固定ジョイントの作成
+for i in range(10):
     fixed_joints.append(ode.FixedJoint(world))
     fixed_joints[i].attach(bodies[i], None)  # ボディを固定
     fixed_joints[i].setFixed()
+
+#二輪箱ロボットの箱の作成
+init_position = []
+init_shape = []
+init_position.append((  box_robo_start_x + 0.0, 0.15, box_robo_start_z + 0.0 )) 
+init_position.append((  box_robo_start_x - 0.15, 0.15, box_robo_start_z + 0.0 )) 
+init_shape.append(( 0.3, 0.28, 0.2))
+init_shape.append(( 0.05, 0.05, 0.05))
+drop_box_robo(init_shape[0], init_position[0], 1.0) #drop_box_robo(init_shape[i], init_position[i], density) 
+drop_box_robo(init_shape[1], init_position[1], 1.0) #drop_box_robo(init_shape[i], init_position[i], density) 
+
 
 
 #シェーダーで描画
 def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
 
-
-
-
     vertices = np.array([], dtype=np.float32)
     indices = np.array([], dtype=np.uint32)
-    #odeのボディオブジェクト
-    for index, b in enumerate(bodies):
-        if index < 4:
-            #color_r, color_g, color_b = ( 0.5, 0.9, 0.1)
-            color_r, color_g, color_b = ( 0.4, 0.23, 0.2)            
-        elif index < 10:
-            color_r, color_g, color_b = ( 0.2, 0.2, 0.2)
-        #bodyの頂点データを作成
-        vertices, indices = draw_body(b, index, vertices, indices, color_r, color_g, color_b)
 
-
+    #床と壁の頂点データを作成
     #床と壁のverticesデータを作成
                            # positions        # normals        # color          #uv and flag
     floor_arr = np.array([  4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1,  4.5, 4.5, 0.7,   #床 0
@@ -522,9 +542,11 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
                             4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  4.5, 1.0, 1.0   #壁手前 19
                            ], dtype=np.float32)
     vertices = np.append(vertices, floor_arr)
-
     #床と壁のIndicesデータを作成
-    i = max(indices) + 1
+    if len(indices) == 0:
+        i = 0
+    else:
+        i = max(indices) + 1
     arr3 = np.array([0+i,1+i,2+i,  3+i,1+i,2+i,  #床
                      4+i,5+i,6+i,  7+i,5+i,6+i,  #壁奥
                      8+i,9+i,10+i,  11+i,9+i,10+i,    #壁左
@@ -532,8 +554,26 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
                      16+i,17+i,18+i,  19+i,17+i,18+i  #壁手前    
                      ], dtype=np.uint32)
     indices = np.append(indices, arr3)
+
+
+    #障害物オブジェクトの頂点データを作成
+    for index, b in enumerate(bodies):
+        if index < 4:
+            #color_r, color_g, color_b = ( 0.5, 0.9, 0.1)
+            color_r, color_g, color_b = ( 0.4, 0.23, 0.2)            
+        elif index < 10:
+            color_r, color_g, color_b = ( 0.2, 0.2, 0.2)
+        #bodyの頂点データを作成
+        vertices, indices = draw_body(b, index, vertices, indices, color_r, color_g, color_b)
+
+    #二輪箱ロボットの頂点データを作成
+    for index, b in enumerate(bodies_robo):
+        color_r, color_g, color_b = ( 0.5, 1.0, 0.5)            
+        #bodyの頂点データを作成
+        vertices, indices = draw_body(b, index, vertices, indices, color_r, color_g, color_b)
     
 
+    
 
     glBindVertexArray(VAO)
 
@@ -570,8 +610,8 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
 
     fov = 45
     aspect_ratio = 320 / 320
-    near = 1.0
-    far = 100.0
+    near = 0.65
+    far = 20.0
 
     f = 1.0 / tan(radians(fov) / 2)
     projection[0, 0] = f / aspect_ratio
@@ -627,49 +667,76 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     #glUniform3f(object_color_loc, 1.0, 0.5, 0.31) # オブジェクトの色
     #glUniform3f(view_pos_loc, 0.0, 0.0, 3.0)     # カメラ位置例
 
-    # 1つ目のビューポート設定（左）
+    # 1つ目のビューポートの設定（左）
     # View matrix (camera)
     glViewport(10, 10, 320, 320)   
     view = np.identity(4, dtype=np.float32)
-    view_angle = 3.14 * 0.3
-    c = cos(view_angle)
-    s = sin(view_angle)
-    # Rotation around Y axis
-    #view[0, 0] = c
-    #view[0, 2] = s
-    #view[2, 0] = -s
-    #view[2, 2] = c
-    # Rotation around x axis  
-    view[1, 1] = c
-    view[1, 2] = s
-    view[2, 1] = -s
-    view[2, 2] = c
-    #平行移動
-    view[3, 0] = 0.0  # Move on x axis
-    view[3, 1] = -1.0  # Move on y axis
-    view[3, 2] = -10.0  # Move on z axis    
+
+    #glm.lookat()でカメラの設定
+    cameraPos = glm.vec3(6.0, 7.2, 7.5,)
+    targetPos = glm.vec3(-1.0, -1.0, 0.0)
+    upVector = glm.vec3(0.0, 1.0, 0.0)    
+    view_glm = glm.lookAt(cameraPos, targetPos, upVector)   #俯瞰の視点
+
+    # numpyの回転行列にglmの回転行列の姿勢データを入れる
+    view[0,0] = view_glm[0,0]
+    view[1,0] = view_glm[1,0]
+    view[2,0] = view_glm[2,0]
+    view[3,0] = view_glm[3,0]
+
+    view[0,1] = view_glm[0,1]
+    view[1,1] = view_glm[1,1]
+    view[2,1] = view_glm[2,1]
+    view[3,1] = view_glm[3,1]
+
+    view[0,2] = view_glm[0,2]
+    view[1,2] = view_glm[1,2]
+    view[2,2] = view_glm[2,2]
+    view[3,2] = view_glm[3,2]
+    
+    view[0,3] = view_glm[0,3]
+    view[1,3] = view_glm[1,3]
+    view[2,3] = view_glm[2,3]
+    view[3,3] = view_glm[3,3]
+
     # uniformのセット
     glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
     # Draw cube
     glBindVertexArray(VAO)
     glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
 
-    # 2つ目のビューポート設定（右）
+    # 2つ目のビューポートの設定（右）
     # View matrix (camera)
     glViewport(340, 10, 320, 320)    
     view = np.identity(4, dtype=np.float32)
-    view_angle = time
-    c = cos(view_angle)
-    s = sin(view_angle)
-    # Rotation around Y axis
-    view[0, 0] = c
-    view[0, 2] = s
-    view[2, 0] = -s
-    view[2, 2] = c
-    #平行移動
-    view[3, 0] = 0.0  # Move on x axis
-    view[3, 1] = -1.0  # Move on y axis
-    view[3, 2] = -3.0  # Move on z axis
+
+    #glm.lookat()でカメラの設定
+    cameraPos = glm.vec3( 0.0, 0.3, 0.0)
+    targetPos = glm.vec3( 1.0, 0.1, 1.0)
+    upVector = glm.vec3(0.0, 1.0, 0.0)    
+    view_glm = glm.lookAt(cameraPos, targetPos, upVector)   #俯瞰の視点
+
+    # numpyの回転行列にglmの回転行列の姿勢データを入れる
+    view[0,0] = view_glm[0,0]
+    view[1,0] = view_glm[1,0]
+    view[2,0] = view_glm[2,0]
+    view[3,0] = view_glm[3,0]
+
+    view[0,1] = view_glm[0,1]
+    view[1,1] = view_glm[1,1]
+    view[2,1] = view_glm[2,1]
+    view[3,1] = view_glm[3,1]
+
+    view[0,2] = view_glm[0,2]
+    view[1,2] = view_glm[1,2]
+    view[2,2] = view_glm[2,2]
+    view[3,2] = view_glm[3,2]
+    
+    view[0,3] = view_glm[0,3]
+    view[1,3] = view_glm[1,3]
+    view[2,3] = view_glm[2,3]
+    view[3,3] = view_glm[3,3]
+
     # uniformのセット
     glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)    
     # Draw cube
@@ -687,12 +754,16 @@ def main():
         return
     
     # Create Window
-    window = glfw.create_window(680, 450, "PyOpenGL GLFW Cube", None, None)
+    window = glfw.create_window(680, 450, "PyOpenGL GLFW ", None, None)
     if not window:
         glfw.terminate()
         return
     
     glfw.make_context_current(window)
+
+    #透明表現を有効にする
+    glEnable(GL_BLEND)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
     # Enable depth test for 3D rendering
     glEnable(GL_DEPTH_TEST)
@@ -755,6 +826,8 @@ def main():
         n = 4
         for i in range(n):
             for g1 in geoms:
+                near_callback((world,contactgroup), g1, floor)
+            for g1 in geoms_robo:
                 near_callback((world,contactgroup), g1, floor)
 
                 #space.collide((world,contactgroup), ode.collide_callback(g1, floor))
