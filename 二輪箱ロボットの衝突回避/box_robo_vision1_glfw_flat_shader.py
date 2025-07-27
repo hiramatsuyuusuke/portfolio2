@@ -62,7 +62,9 @@ uniform vec3 lightColor;
 //uniform vec3 objectColor;
 //uniform vec3 viewPos;
 
-uniform sampler2D texture;
+uniform sampler2D texture0;
+uniform sampler2D texture1;
+
 in vec3 UV_and_flag; // UV座標
 
 
@@ -90,7 +92,14 @@ void main()
     }
     else
     {
-        FragColor = texture2D(texture, vec2(UV_and_flag[0], UV_and_flag[1]));
+        if (UV_and_flag[2]<0.8)
+        {
+            FragColor = texture2D(texture0, vec2(UV_and_flag[0], UV_and_flag[1]));
+        }
+        else
+        {
+            FragColor = texture2D(texture1, vec2(UV_and_flag[0], UV_and_flag[1]));
+        }
     }
 }
 """
@@ -487,30 +496,30 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
 
     #床と壁のverticesデータを作成
                            # positions        # normals        # color          #uv and flag
-    floor_arr = np.array([  4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1,  4.5, 4.5, 1.0,   #床 0
-                            4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1,  4.5, 0.0, 1.0,   #床 1
-                           -4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1,  0.0, 4.5, 1.0,   #床 2
-                           -4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1,  0.0, 0.0, 1.0,   #床 3
+    floor_arr = np.array([  4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1,  4.5, 4.5, 0.7,   #床 0
+                            4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1,  4.5, 0.0, 0.7,   #床 1
+                           -4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1,  0.0, 4.5, 0.7,   #床 2
+                           -4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1,  0.0, 0.0, 0.7,   #床 3
 
-                           -4.5, 0.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁奥 4
-                            4.5, 0.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁奥 5
-                           -4.5, 2.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁奥 6
-                            4.5, 2.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁奥 7
+                           -4.5, 0.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  0.0, 0.0, 1.0,   #壁奥 4
+                            4.5, 0.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  4.5, 0.0, 1.0,   #壁奥 5
+                           -4.5, 2.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  0.0, 1.0, 1.0,   #壁奥 6
+                            4.5, 2.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  4.5, 1.0, 1.0,   #壁奥 7
 
-                           -4.5, 0.0, -4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁左 8
-                           -4.5, 0.0,  4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁左 9
-                           -4.5, 2.0, -4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁左 10
-                           -4.5, 2.0,  4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁左 11
+                           -4.5, 0.0, -4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  0.0, 0.0, 1.0,   #壁左 8
+                           -4.5, 0.0,  4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  4.5, 0.0, 1.0,   #壁左 9
+                           -4.5, 2.0, -4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  0.0, 1.0, 1.0,   #壁左 10
+                           -4.5, 2.0,  4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  4.5, 1.0, 1.0,   #壁左 11
 
-                            4.5, 0.0, -4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁右 12
-                            4.5, 0.0,  4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁右 13
-                            4.5, 2.0, -4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁右 14
-                            4.5, 2.0,  4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁右 15
+                            4.5, 0.0, -4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  0.0, 0.0, 1.0,   #壁右 12
+                            4.5, 0.0,  4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  4.5, 0.0, 1.0,   #壁右 13
+                            4.5, 2.0, -4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  0.0, 1.0, 1.0,   #壁右 14
+                            4.5, 2.0,  4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  4.5, 1.0, 1.0,   #壁右 15
 
-                           -4.5, 0.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁手前 16
-                            4.5, 0.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁手前 17
-                           -4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0,   #壁手前 18
-                            4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  1.0, 1.0, 0.0   #壁手前 19
+                           -4.5, 0.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  0.0, 0.0, 1.0,   #壁手前 16
+                            4.5, 0.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  4.5, 0.0, 1.0,   #壁手前 17
+                           -4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  0.0, 1.0, 1.0,   #壁手前 18
+                            4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  4.5, 1.0, 1.0   #壁手前 19
                            ], dtype=np.float32)
     vertices = np.append(vertices, floor_arr)
 
@@ -580,6 +589,10 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     #glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
     glUseProgram(shader_program)
+    glUniform1i(glGetUniformLocation(shader_program, "texture0"), 0) # GL_TEXTURE0を渡す
+    glUniform1i(glGetUniformLocation(shader_program, "texture1"), 1) # GL_TEXTURE1を渡す
+
+
 
     # Calculate rotation angle
     time = glfw.get_time()
@@ -645,7 +658,7 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     # View matrix (camera)
     glViewport(340, 10, 320, 320)    
     view = np.identity(4, dtype=np.float32)
-    view_angle = 3.14 * 0.3
+    view_angle = time
     c = cos(view_angle)
     s = sin(view_angle)
     # Rotation around Y axis
@@ -670,8 +683,9 @@ def main():
     global bodies, geoms
 
     # Initialize GLFW
-    glfw.init()
-
+    if not glfw.init():
+        return
+    
     # Create Window
     window = glfw.create_window(680, 450, "PyOpenGL GLFW Cube", None, None)
     if not window:
@@ -690,10 +704,15 @@ def main():
     VBO = glGenBuffers(1)
     EBO = glGenBuffers(1)
 
-
     #テクスチャ読み込み#
     tex_floor = load_texture("sample1.png")
-
+    tex_wall = load_texture("sample2.png")
+    # テクスチャ0にバインド
+    glActiveTexture(GL_TEXTURE0)
+    glBindTexture(GL_TEXTURE_2D, tex_floor)
+    # テクスチャ1にバインド
+    glActiveTexture(GL_TEXTURE1)
+    glBindTexture(GL_TEXTURE_2D, tex_wall)
 
     #物理演算とシェーダのループ部分
     while not glfw.window_should_close(window):
@@ -717,11 +736,10 @@ def main():
         glDisable(GL_SCISSOR_TEST)
 
         #シェーダーで描画
-        glBindTexture(GL_TEXTURE_2D, tex_floor)
         use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO)
-        glBindTexture(GL_TEXTURE_2D, 0)  # Unbind texture
 
-        #物理演算
+
+        #物理演算部分
         t = dt - (time.time() - lasttime)
         if (t > 0):
             time.sleep(t)
@@ -731,7 +749,6 @@ def main():
         #if state==0:
         #    if counter==20:
         #        drop_object()
-
 
         ##衝突検出部分を書き換え。#############
         # Simulate
@@ -748,7 +765,12 @@ def main():
         ##衝突検出部分を書き換え。終了。#############
 
         lasttime = time.time()
-        
+
+    glActiveTexture(GL_TEXTURE0)
+    glBindTexture(GL_TEXTURE_2D, 0)  # Unbind texture
+    glActiveTexture(GL_TEXTURE1)
+    glBindTexture(GL_TEXTURE_2D, 0)  # Unbind texture
+
     # Cleanup
     glDeleteVertexArrays(1, [VAO])
     glDeleteBuffers(1, [VBO])
