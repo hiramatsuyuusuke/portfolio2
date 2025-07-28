@@ -11,6 +11,11 @@ import numpy as np
 import ode
 
 from PIL import Image
+from PIL import ImageOps
+import torch
+from torch import nn
+import torchvision.transforms as transforms
+import torchvision.models as models
 
 # Vertex Shader
 vertex_shader_source = """
@@ -19,29 +24,30 @@ vertex_shader_source = """
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in vec3 color;
-layout(location = 3) in vec3 vertexUV_and_flag;
-
+layout(location = 3) in float color_opacity;
+layout(location = 4) in vec2 vertexUV;
+layout(location = 5) in float vertexUV_flag;
 
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
 out vec3 FragPos;
-//out vec3 Normal;
-flat out vec3 Normal;
+out vec3 Normal;
 out vec3 Color;
-
-out vec3 UV_and_flag;
-
+out float Color_opacity;
+out vec2 UV;
+out float UV_flag;
 
 void main()
 {
     FragPos = vec3(model * vec4(position, 1.0));
-    //Normal = mat3(transpose(inverse(model))) * normal;
-    Normal = normal;
+    Normal = mat3(transpose(inverse(model))) * normal;
     gl_Position = projection * view * vec4(FragPos, 1.0);
     Color = color;
-    UV_and_flag = vertexUV_and_flag;
+    Color_opacity = color_opacity;
+    UV = vertexUV;
+    UV_flag = vertexUV_flag;
 }
 """
 
@@ -50,11 +56,13 @@ fragment_shader_source = """
 #version 330 core
 
 in vec3 FragPos;
-//in vec3 Normal;
-flat in vec3 Normal;
+in vec3 Normal;
+in vec3 Color;
+in float Color_opacity;
+in vec2 UV; // UV座標
+in float UV_flag;
 
 out vec4 FragColor;
-in vec3 Color;
 
 
 uniform vec3 lightDir;    // 光源の方向（正規化済み）
@@ -64,8 +72,6 @@ uniform vec3 lightColor;
 
 uniform sampler2D texture0;
 uniform sampler2D texture1;
-
-in vec3 UV_and_flag; // UV座標
 
 
 void main()
@@ -85,20 +91,20 @@ void main()
     // 拡散光強度分だけ色乗算
     vec3 diffuse = diff * lightColor;
 
-    if (UV_and_flag[2]<0.5)
+    if (UV_flag<0.5)
     {
         vec3 result = (ambient + diffuse) * Color;
-        FragColor = vec4(result, 1.0);
+        FragColor = vec4(result, Color_opacity);
     }
     else
     {
-        if (UV_and_flag[2]<0.8)
+        if (UV_flag<0.8)
         {
-            FragColor = texture2D(texture0, vec2(UV_and_flag[0], UV_and_flag[1]));
+            FragColor = texture2D(texture0, UV);
         }
         else
         {
-            FragColor = texture2D(texture1, vec2(UV_and_flag[0], UV_and_flag[1]));
+            FragColor = texture2D(texture1, UV);
         }
     }
 }
@@ -132,7 +138,7 @@ def create_shader_program():
     return program
 
 # シェーダー用の頂点データと法線データを作成
-def draw_body(body, body_index, vertices, indices, color_r, color_g, color_b):
+def draw_body(body, vertices, indices, color_r, color_g, color_b):
     """Draw an ODE body.
     """
     #boxの頂点座標の計算
@@ -244,7 +250,7 @@ def draw_body(body, body_index, vertices, indices, color_r, color_g, color_b):
     for i in range(24):                                  
         arr2 = np.array([   vpx[i]+px, vpy[i]+py, vpz[i]+pz,    # positions
                             nx[i], ny[i], nz[i],                # normals
-                            color_r, color_g, color_b,          # color
+                            color_r, color_g, color_b, 1.0,     # color
                             1.0, 1.0, 0.0],                     #uv and flag
                             dtype=np.float32)
         arr1 = np.append(arr1, arr2)
@@ -296,6 +302,24 @@ def create_box(world, space, density, lx, ly, lz):
 
     return body, geom
 
+# create_cylinder
+def create_cylinder(world, space, density, direction, r, h):
+    """Create a cylinder body and its corresponding geom."""
+    # Create body
+    body = ode.Body(world)
+    M = ode.Mass()
+    M.setCylinder(density, direction, r, h)
+    body.setMass(M)
+
+    # Set parameters for drawing the body
+    body.shape = "cylinder"
+    body.cylindersize = (r, h)
+    
+    # Create a box geom for collision detection
+    geom = ode.GeomCylinder(space, r, h)
+    geom.setBody(body)
+    return body, geom
+
 # drop_object
 def drop_object():
     """Drop an object into the scene."""
@@ -314,12 +338,12 @@ def drop_object():
     objcount+=1
 
 # drop_box_object
-def drop_box( init_shape, init_position, density):
+def drop_box( init_object_i, density):
     """Drop an object into the scene."""
     global bodies, geoms, objcount
 
-    lx, ly, lz = init_shape
-    px, py, pz = init_position
+    lx, ly, lz = init_object_i[1]
+    px, py, pz = init_object_i[2]
 
     body, geom = create_box(world, space, density, lx, ly, lz)
     theta = 0
@@ -332,25 +356,27 @@ def drop_box( init_shape, init_position, density):
     geoms.append(geom)
     objcount += 1
 
-# drop_box_robo_object
-def drop_box_robo( init_shape, init_position, density):
+# drop_cylinder_object
+def drop_cylinder( rotation_num, init_object_i, density):
     """Drop an object into the scene."""
     global bodies, geoms, objcount
 
-    lx, ly, lz = init_shape
-    px, py, pz = init_position
+    r,h = init_object_i[1]
+    px, py, pz = init_object_i[2]
 
-    body, geom = create_box(world, space, density, lx, ly, lz)
-    theta = 0
-    body.setPosition( (px, py, pz) )
+    #odeとopenglのシリンダーの方向を一致させるために、3(z軸方向)にする。
+    body, geom = create_cylinder(world, space, density, 3, r, h)  
+    if rotation_num == 1:
+        theta = 3.1415*(0.0/180.0)  #シリンダーの方向はz軸方向
+    if rotation_num == 2:
+        theta = 3.1415*(90.0/180.0) #シリンダーの方向をy軸方向にして、シリンダーを立てる。
+    body.setPosition( (px, py, pz) )  
     ct = cos (theta)
     st = sin (theta)
-    body.setRotation([ct, 0., -st, 0., 1., 0., st, 0., ct])#y軸回転
-    #body.setRotation([1., 0., 0., 0., ct, -st, 0., st, ct])#x軸回転 
-    bodies_robo.append(body)
-    geoms_robo.append(geom)
+    body.setRotation([1., 0., 0., 0., ct, st, 0., -st, ct])#x軸回転
+    bodies.append(body)
+    geoms.append(geom)
     objcount += 1
-
 
 # explosion
 def explosion():
@@ -405,6 +431,47 @@ def near_callback(args, geom1, geom2):
         j = ode.ContactJoint(world, contactgroup, c)
         j.attach(geom1.getBody(), geom2.getBody())
 
+#画面キャプチャ
+def capture2():
+    width = 320
+    height = 320
+
+    glReadBuffer(GL_FRONT)
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+    data = glReadPixels(340, 10, width, height, GL_RGB, GL_UNSIGNED_BYTE)
+
+    image = Image.frombytes("RGB", (width, height), data)
+    image = ImageOps.flip(image)
+    
+    new_size = (32, 32) # 縮小するサイズを指定 (幅, 高さ)
+    resized_image = image.resize(new_size)  # 画像をリサイズ
+    #resized_image.save( "capture2()_test.jpg" )  # 縮小した画像を保存
+
+    return resized_image
+
+#ResNet18を使って、衝突するかどうかを判定
+def display_image_recognition():
+
+    # 画面をキャプチャ
+    field_image = capture2()
+
+    # 画像をTensorに変換
+    transform = transforms.ToTensor()
+    tensor_image = transform(field_image)
+    input_tensor = tensor_image.unsqueeze(0)  # バッチ次元を追加
+
+    # 推論
+    with torch.no_grad():
+        Learned_model_output = Learned_model(input_tensor)
+
+    #衝突するかどうかを判定
+    if Learned_model_output[0,0] < Learned_model_output[0,1]:
+        print(1)
+        return 1
+    else:
+        print(0)
+        return 0
+
 #テクスチャ読み込み関数
 def load_texture(texture_file_name):
 
@@ -419,7 +486,21 @@ def load_texture(texture_file_name):
     glBindTexture(GL_TEXTURE_2D, 0)  # Unbind texture
 
     return texture_id
+
+
 ######################################################################
+# Initialize GLFW
+glfw.init()
+if not glfw.init():
+    glfw.terminate()
+
+# Create Window
+window = glfw.create_window(680, 450, "PyOpenGL GLFW ", None, None)
+if not window:
+    glfw.terminate()
+#
+glfw.make_context_current(window)
+
 
 # Create a world object
 world = ode.World()
@@ -435,12 +516,10 @@ floor = ode.GeomPlane(space, (0,1,0), 0)
 
 # A list with ODE bodies
 bodies = []
-bodies_robo = []
+
 # The geoms for each of the bodies
 geoms = []
-geoms_robo = []
-#
-fixed_joints=[]
+
 # A joint group for the contact joints that are generated whenever
 # two bodies collide
 contactgroup = ode.JointGroup()
@@ -458,53 +537,69 @@ lasttime = time.time()
 box_robo_start_x = 2.0
 box_robo_start_z = 2.0
 
-#box障害物オブジェクトの初期位置
-init_position = []
-init_shape = []
 
-init_position.append((  3.8,  0.7,  0.82)) #0 : 机の天板
-init_position.append((  3.3,  0.3,  0.00))    #1 : 机の脚
-init_position.append((  4.3,  0.3,  0.00))    #2 : 机の脚
-init_position.append((  3.8,  0.3,  1.40))   #3 : 机の引き出し
-init_position.append(( -3.7,  0.6,  1.00))  #4 : 棚の天板1
-init_position.append(( -3.7,  1.0,  1.00))  #5 : 棚の天板2
-init_position.append(( -4.2,  0.5,  0.00))   #6 : 棚の脚
-init_position.append(( -3.2,  0.5,  0.00))   #7 : 棚の脚
-init_position.append(( -3.2,  0.5,  2.00))   #8 : 棚の脚
-init_position.append(( -4.2,  0.5,  2.00))   #9 : 棚の脚
-#box障害物オブジェクトの初期形状
-init_shape.append(( 1.30, 0.2, 1.70))      #0 : 机の天板
-init_shape.append(( 0.15, 0.6, 0.15))    #1 : 机の脚
-init_shape.append(( 0.15, 0.6, 0.15))    #2 : 机の脚
-init_shape.append(( 1.00, 0.6, 0.50))      #3 : 机の引き出し
-init_shape.append(( 1.00, 0.1, 2.00))      #4 : 棚の天板1
-init_shape.append(( 1.00, 0.1, 2.00))      #5 : 棚の天板2
-init_shape.append(( 0.15, 1.0, 0.15))     #6 : 棚の脚
-init_shape.append(( 0.15, 1.0, 0.15))     #7 : 棚の脚
-init_shape.append(( 0.15, 1.0, 0.15))     #8 : 棚の脚
-init_shape.append(( 0.15, 1.0, 0.15))     #9 : 棚の脚
+#オブジェクトの初期設定
+init_object = []
+                    #name               #shape                  #position
+init_object.append(["box",              ( 1.30, 0.2, 1.70),     (  3.8,  0.7,  0.82)])      #0 : 机の天板
+init_object.append(["box",              ( 0.15, 0.6, 0.15),     (  3.3,  0.3,  0.00)])    #1 : 机の脚
+init_object.append(["box",              ( 0.15, 0.6, 0.15),     (  4.3,  0.3,  0.00)])    #2 : 机の脚
+init_object.append(["box",              ( 1.00, 0.6, 0.50),     (  3.8,  0.3,  1.40)])      #3 : 机の引き出し
+init_object.append(["box",              ( 1.00, 0.1, 2.00),     ( -3.7,  0.6,  1.00)])      #4 : 棚の天板1
+init_object.append(["box",              ( 1.00, 0.1, 2.00),     ( -3.7,  1.0,  1.00)])      #5 : 棚の天板2
+init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -4.2,  0.5,  0.00)])     #6 : 棚の脚
+init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -3.2,  0.5,  0.00)])     #7 : 棚の脚
+init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -3.2,  0.5,  2.00)])     #8 : 棚の脚
+init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -4.2,  0.5,  2.00)])     #9 : 棚の脚
+init_object.append(["cylinder",         ( 0.15, 0.1),           ( box_robo_start_x + 0.0, 0.15, box_robo_start_z + 0.17 )])     #10 : 二輪箱ロボットの車輪
+init_object.append(["cylinder",         ( 0.15, 0.1),           ( box_robo_start_x + 0.0, 0.15, box_robo_start_z - 0.17 )])     #11 : 二輪箱ロボットの車輪
+init_object.append(["box_robo",         ( 0.3, 0.28, 0.2),      (  box_robo_start_x + 0.0, 0.15, box_robo_start_z + 0.0 )])      #12 : 二輪箱ロボットの箱
+init_object.append(["box_gaze_point",   ( 0.05, 0.05, 0.05),    (  box_robo_start_x - 0.3, 0.15, box_robo_start_z + 0.0 )])      #13 : 注視点用box
 
-#障害物オブジェクトをodeのワールドに設定
-for i in range(10):
-    #障害物オブジェクトのリストに入れる
-    drop_box(init_shape[i], init_position[i], 1000) #drop_box(init_shape[i], init_position[i], density) 
+#オブジェクトをbodies[]とgeoms[]に入れる
+for iob in init_object:
+    # 車輪
+    if iob[0] == "cylinder": 
+        drop_cylinder(1, iob, 10)  #(rotation_num, init_object[i], density)
+    # 車輪以外
+    else:
+        drop_box(iob, 1.0) #drop_box_robo(init_object[i], density)
 
-#障害物オブジェクトの固定ジョイントの作成
-for i in range(10):
-    fixed_joints.append(ode.FixedJoint(world))
-    fixed_joints[i].attach(bodies[i], None)  # ボディを固定
-    fixed_joints[i].setFixed()
+#固定ジョイントの作成
+fixed_joints=[]
+for i in range(11):
+    #障害物オブジェクトの固定ジョイントの作成
+    if i < 10: 
+        fixed_joints.append(ode.FixedJoint(world))
+        fixed_joints[i].attach(bodies[i], None)  #障害物オブジェクトをその場に固定
+        fixed_joints[i].setFixed()
+    #箱と注視点boxの固定ジョイントの作成
+    if i == 10:
+        fixed_joints.append(ode.FixedJoint(world))
+        fixed_joints[i].attach(bodies[12], bodies[13])  #箱と注視点boxを固定
+        fixed_joints[i].setFixed()
 
-#二輪箱ロボットの箱の作成
-init_position = []
-init_shape = []
-init_position.append((  box_robo_start_x + 0.0, 0.15, box_robo_start_z + 0.0 )) 
-init_position.append((  box_robo_start_x - 0.15, 0.15, box_robo_start_z + 0.0 )) 
-init_shape.append(( 0.3, 0.28, 0.2))
-init_shape.append(( 0.05, 0.05, 0.05))
-drop_box_robo(init_shape[0], init_position[0], 1.0) #drop_box_robo(init_shape[i], init_position[i], density) 
-drop_box_robo(init_shape[1], init_position[1], 1.0) #drop_box_robo(init_shape[i], init_position[i], density) 
+#ヒンジジョイントの作成
+hinge2_joints=[]
+#二輪箱ロボットの車輪のヒンジ2ジョイント 1
+hinge2_joints.append(ode.Hinge2Joint(world))
+hinge2_joints[0].attach(bodies[12], bodies[10])
+hinge2_joints[0].setAnchor((box_robo_start_x + 0.0, 0.15, box_robo_start_z + 0.0))
+hinge2_joints[0].setAxis1((0, 0, 1))  # Set the first axis (e.g., wheel rotation)
+hinge2_joints[0].setAxis2((0, 1, 0))  # Set the second axis (e.g., suspension/steering)
+# 第2軸の回転を固定
+hinge2_joints[0].setParam(ode.ParamVel2, 0)  # 速度をゼロに設定
+hinge2_joints[0].setParam(ode.ParamFMax2, 1000)  # 強い力で固定
 
+#二輪箱ロボットの車輪のヒンジ2ジョイント 2
+hinge2_joints.append(ode.Hinge2Joint(world))
+hinge2_joints[1].attach(bodies[12], bodies[11])
+hinge2_joints[1].setAnchor((box_robo_start_x + 0.0, 0.15, box_robo_start_z + 0.0))
+hinge2_joints[1].setAxis1((0, 0, 1))  # Set the first axis (e.g., wheel rotation)
+hinge2_joints[1].setAxis2((0, 1, 0))  # Set the second axis (e.g., suspension/steering)
+# 第2軸の回転を固定
+hinge2_joints[1].setParam(ode.ParamVel2, 0)  # 速度をゼロに設定
+hinge2_joints[1].setParam(ode.ParamFMax2, 1000)  # 強い力で固定
 
 
 #シェーダーで描画
@@ -515,31 +610,31 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
 
     #床と壁の頂点データを作成
     #床と壁のverticesデータを作成
-                           # positions        # normals        # color          #uv and flag
-    floor_arr = np.array([  4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1,  4.5, 4.5, 0.7,   #床 0
-                            4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1,  4.5, 0.0, 0.7,   #床 1
-                           -4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1,  0.0, 4.5, 0.7,   #床 2
-                           -4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1,  0.0, 0.0, 0.7,   #床 3
+                           # positions        # normals        # color               #uv and flag
+    floor_arr = np.array([  4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1, 1.0,   4.5, 4.5, 0.7,   #床 0
+                            4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1, 1.0,   4.5, 0.0, 0.7,   #床 1
+                           -4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1, 1.0,   0.0, 4.5, 0.7,   #床 2
+                           -4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1, 1.0,   0.0, 0.0, 0.7,   #床 3
 
-                           -4.5, 0.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  0.0, 0.0, 1.0,   #壁奥 4
-                            4.5, 0.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  4.5, 0.0, 1.0,   #壁奥 5
-                           -4.5, 2.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  0.0, 1.0, 1.0,   #壁奥 6
-                            4.5, 2.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0,  4.5, 1.0, 1.0,   #壁奥 7
+                           -4.5, 0.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0, 1.0,   0.0, 0.0, 1.0,   #壁奥 4
+                            4.5, 0.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0, 1.0,   4.5, 0.0, 1.0,   #壁奥 5
+                           -4.5, 2.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0, 1.0,   0.0, 1.0, 1.0,   #壁奥 6
+                            4.5, 2.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0, 1.0,   4.5, 1.0, 1.0,   #壁奥 7
 
-                           -4.5, 0.0, -4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  0.0, 0.0, 1.0,   #壁左 8
-                           -4.5, 0.0,  4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  4.5, 0.0, 1.0,   #壁左 9
-                           -4.5, 2.0, -4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  0.0, 1.0, 1.0,   #壁左 10
-                           -4.5, 2.0,  4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  4.5, 1.0, 1.0,   #壁左 11
+                           -4.5, 0.0, -4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   0.0, 0.0, 1.0,   #壁左 8
+                           -4.5, 0.0,  4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   4.5, 0.0, 1.0,   #壁左 9
+                           -4.5, 2.0, -4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   0.0, 1.0, 1.0,   #壁左 10
+                           -4.5, 2.0,  4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   4.5, 1.0, 1.0,   #壁左 11
 
-                            4.5, 0.0, -4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  0.0, 0.0, 1.0,   #壁右 12
-                            4.5, 0.0,  4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  4.5, 0.0, 1.0,   #壁右 13
-                            4.5, 2.0, -4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  0.0, 1.0, 1.0,   #壁右 14
-                            4.5, 2.0,  4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0,  4.5, 1.0, 1.0,   #壁右 15
+                            4.5, 0.0, -4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   0.0, 0.0, 1.0,   #壁右 12
+                            4.5, 0.0,  4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   4.5, 0.0, 1.0,   #壁右 13
+                            4.5, 2.0, -4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   0.0, 1.0, 1.0,   #壁右 14
+                            4.5, 2.0,  4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   4.5, 1.0, 1.0,   #壁右 15
 
-                           -4.5, 0.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  0.0, 0.0, 1.0,   #壁手前 16
-                            4.5, 0.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  4.5, 0.0, 1.0,   #壁手前 17
-                           -4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  0.0, 1.0, 1.0,   #壁手前 18
-                            4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0,  4.5, 1.0, 1.0   #壁手前 19
+                           -4.5, 0.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0, 1.0,   0.0, 0.0, 1.0,   #壁手前 16
+                            4.5, 0.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0, 1.0,   4.5, 0.0, 1.0,   #壁手前 17
+                           -4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0, 1.0,   0.0, 1.0, 1.0,   #壁手前 18
+                            4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0, 1.0,   4.5, 1.0, 1.0   #壁手前 19
                            ], dtype=np.float32)
     vertices = np.append(vertices, floor_arr)
     #床と壁のIndicesデータを作成
@@ -558,22 +653,18 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
 
     #障害物オブジェクトの頂点データを作成
     for index, b in enumerate(bodies):
+        #カラーの設定
         if index < 4:
-            #color_r, color_g, color_b = ( 0.5, 0.9, 0.1)
             color_r, color_g, color_b = ( 0.4, 0.23, 0.2)            
         elif index < 10:
             color_r, color_g, color_b = ( 0.2, 0.2, 0.2)
-        #bodyの頂点データを作成
-        vertices, indices = draw_body(b, index, vertices, indices, color_r, color_g, color_b)
+        elif index == 12 or  index == 13:
+            color_r, color_g, color_b = (  0.5, 0.9, 0.1)
 
-    #二輪箱ロボットの頂点データを作成
-    for index, b in enumerate(bodies_robo):
-        color_r, color_g, color_b = ( 0.5, 1.0, 0.5)            
         #bodyの頂点データを作成
-        vertices, indices = draw_body(b, index, vertices, indices, color_r, color_g, color_b)
-    
-
-    
+        if index < 10 or index == 12:#車輪（10番、11番）と注視点用box（13番）を描画しない
+            #bodyの頂点データを作成
+            vertices, indices = draw_body(b, vertices, indices, color_r, color_g, color_b)
 
     glBindVertexArray(VAO)
 
@@ -586,21 +677,28 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.nbytes, indices, GL_STATIC_DRAW)
 
     # Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 12 * vertices.itemsize, ctypes.c_void_p(0))
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(0))
     glEnableVertexAttribArray(0)
 
     # normal attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 12 * vertices.itemsize, ctypes.c_void_p(3 * vertices.itemsize))
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(3 * vertices.itemsize))
     glEnableVertexAttribArray(1)
 
     # color attribute
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 12 * vertices.itemsize, ctypes.c_void_p(6 * vertices.itemsize))
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(6 * vertices.itemsize))
     glEnableVertexAttribArray(2)
 
-    # 
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 12 * vertices.itemsize, ctypes.c_void_p(9 * vertices.itemsize))
+    # color opacity
+    glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(9 * vertices.itemsize))
     glEnableVertexAttribArray(3)
 
+    # uv
+    glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(10 * vertices.itemsize))
+    glEnableVertexAttribArray(4)
+
+    # uv flag
+    glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(12 * vertices.itemsize))
+    glEnableVertexAttribArray(5)
 
     glBindBuffer(GL_ARRAY_BUFFER, 0)
     glBindVertexArray(0)
@@ -610,29 +708,23 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
 
     fov = 45
     aspect_ratio = 320 / 320
-    near = 0.65
-    far = 20.0
+    near = 0.5
+    far = 30.0
 
     f = 1.0 / tan(radians(fov) / 2)
     projection[0, 0] = f / aspect_ratio
     projection[1, 1] = f
     projection[2, 2] = (far + near) / (near - far)
     projection[2, 3] = (2 * far * near) / (near - far)
-    projection[3, 2] = -1
+    projection[3, 2] = -0.5
     projection[3, 3] = 0
         
-
     # Start render 
     glfw.poll_events()
-
-    #glClearColor(0.1, 0.3, 0.3, 1)
-    #glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
     glUseProgram(shader_program)
     glUniform1i(glGetUniformLocation(shader_program, "texture0"), 0) # GL_TEXTURE0を渡す
     glUniform1i(glGetUniformLocation(shader_program, "texture1"), 1) # GL_TEXTURE1を渡す
-
-
 
     # Calculate rotation angle
     time = glfw.get_time()
@@ -710,13 +802,16 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     glViewport(340, 10, 320, 320)    
     view = np.identity(4, dtype=np.float32)
 
+    robo_x, robo_y, robo_z = bodies[12].getPosition()   #boxの座標を取得
+    gaze_x, gaze_y, gaze_z = bodies[13].getPosition()   #boxの座標を取得
+
     #glm.lookat()でカメラの設定
-    cameraPos = glm.vec3( 0.0, 0.3, 0.0)
-    targetPos = glm.vec3( 1.0, 0.1, 1.0)
+    cameraPos = glm.vec3( robo_x, robo_y, robo_z)
+    targetPos = glm.vec3( gaze_x, 0.148, gaze_z)
     upVector = glm.vec3(0.0, 1.0, 0.0)    
     view_glm = glm.lookAt(cameraPos, targetPos, upVector)   #俯瞰の視点
 
-    # numpyの回転行列にglmの回転行列の姿勢データを入れる
+    # numpyの回転行列にglm.lookAt()の回転行列のデータを入れる
     view[0,0] = view_glm[0,0]
     view[1,0] = view_glm[1,0]
     view[2,0] = view_glm[2,0]
@@ -749,18 +844,6 @@ def main():
     global counter, state, lasttime
     global bodies, geoms
 
-    # Initialize GLFW
-    if not glfw.init():
-        return
-    
-    # Create Window
-    window = glfw.create_window(680, 450, "PyOpenGL GLFW ", None, None)
-    if not window:
-        glfw.terminate()
-        return
-    
-    glfw.make_context_current(window)
-
     #透明表現を有効にする
     glEnable(GL_BLEND)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
@@ -774,16 +857,6 @@ def main():
     VAO = glGenVertexArrays(1)
     VBO = glGenBuffers(1)
     EBO = glGenBuffers(1)
-
-    #テクスチャ読み込み#
-    tex_floor = load_texture("sample1.png")
-    tex_wall = load_texture("sample2.png")
-    # テクスチャ0にバインド
-    glActiveTexture(GL_TEXTURE0)
-    glBindTexture(GL_TEXTURE_2D, tex_floor)
-    # テクスチャ1にバインド
-    glActiveTexture(GL_TEXTURE1)
-    glBindTexture(GL_TEXTURE_2D, tex_wall)
 
     #物理演算とシェーダのループ部分
     while not glfw.window_should_close(window):
@@ -817,17 +890,45 @@ def main():
         
         counter += 1
 
-        #if state==0:
-        #    if counter==20:
-        #        drop_object()
+        if counter==50:     
+            if display_image_recognition() == 0:
+                # Configure joint parameters (optional)
+                hinge2_joints[0].setParam(ode.ParamVel, -2.5)  # Set desired velocity
+                hinge2_joints[0].setParam(ode.ParamFMax, 100)  # Set maximum force
+
+                # Configure joint parameters (optional)
+                hinge2_joints[1].setParam(ode.ParamVel, -2.5)  # Set desired velocity
+                hinge2_joints[1].setParam(ode.ParamFMax, 100)  # Set maximum force
+
+            if display_image_recognition() == 1:
+                # Configure joint parameters (optional)
+                hinge2_joints[0].setParam(ode.ParamVel, -2.5)  # Set desired velocity
+                hinge2_joints[0].setParam(ode.ParamFMax, 100)  # Set maximum force
+
+                # Configure joint parameters (optional)
+                hinge2_joints[1].setParam(ode.ParamVel, 2.5)  # Set desired velocity
+                hinge2_joints[1].setParam(ode.ParamFMax, 100)  # Set maximum force
+
+        if counter == 100:  
+            # Configure joint parameters (optional)
+            hinge2_joints[0].setParam(ode.ParamVel, 0)  # Set desired velocity
+            hinge2_joints[0].setParam(ode.ParamFMax, 100)  # Set maximum force
+
+            # Configure joint parameters (optional)
+            hinge2_joints[1].setParam(ode.ParamVel, 0)  # Set desired velocity
+            hinge2_joints[1].setParam(ode.ParamFMax, 100)  # Set maximum force
+            #カウンターを最初に戻す
+            counter = 0
 
         ##衝突検出部分を書き換え。#############
         # Simulate
         n = 4
         for i in range(n):
+
             for g1 in geoms:
-                near_callback((world,contactgroup), g1, floor)
-            for g1 in geoms_robo:
+                    near_callback((world,contactgroup), g1, geoms[12]) # geoms[12]はbox_robo
+
+            for g1 in geoms:
                 near_callback((world,contactgroup), g1, floor)
 
                 #space.collide((world,contactgroup), ode.collide_callback(g1, floor))
@@ -839,11 +940,6 @@ def main():
 
         lasttime = time.time()
 
-    glActiveTexture(GL_TEXTURE0)
-    glBindTexture(GL_TEXTURE_2D, 0)  # Unbind texture
-    glActiveTexture(GL_TEXTURE1)
-    glBindTexture(GL_TEXTURE_2D, 0)  # Unbind texture
-
     # Cleanup
     glDeleteVertexArrays(1, [VAO])
     glDeleteBuffers(1, [VBO])
@@ -852,4 +948,30 @@ def main():
     glfw.terminate()
 
 if __name__ == "__main__":
+
+    #学習していないResNet18 modelを読み込んでインスタンスを生成
+    Learned_model = models.resnet18(weights = None)
+    # Modify the final fully connected layer for a custom number of classes
+    num_classes = 2 #衝突するクラスと衝突しないクラスの2つ
+    Learned_model.fc = nn.Linear(Learned_model.fc.in_features, num_classes)
+    #3D空間の画像を使って学習したResNet18の読み込み
+    Learned_model.load_state_dict(torch.load("Weight1.pth", weights_only=True))
+    Learned_model.eval()  # 推論モードに切り替え
+
+    #テクスチャ読み込み#
+    tex_floor = load_texture("sample1.png")
+    tex_wall = load_texture("sample2.png")
+    # テクスチャ0にバインド
+    glActiveTexture(GL_TEXTURE0)
+    glBindTexture(GL_TEXTURE_2D, tex_floor)
+    # テクスチャ1にバインド
+    glActiveTexture(GL_TEXTURE1)
+    glBindTexture(GL_TEXTURE_2D, tex_wall)
+
     main()
+
+    # Unbind texture
+    glActiveTexture(GL_TEXTURE0)
+    glBindTexture(GL_TEXTURE_2D, 0)  # Unbind texture
+    glActiveTexture(GL_TEXTURE1)
+    glBindTexture(GL_TEXTURE_2D, 0)  # Unbind texture
