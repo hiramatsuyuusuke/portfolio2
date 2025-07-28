@@ -138,138 +138,286 @@ def create_shader_program():
     return program
 
 # シェーダー用の頂点データと法線データを作成
-def draw_body(body, vertices, indices, color_r, color_g, color_b):
+def draw_body(body, vertices, indices, color_rgba):
     """Draw an ODE body.
     """
-    #boxの頂点座標の計算
-    lx,ly,lz = body.boxsize
-    box_vx = lx * 0.5
-    box_vy = ly * 0.5
-    box_vz = lz * 0.5
+    #boxの頂点データを作成
+    if body.shape == "box":
+        #カラーの設定
+        color_r, color_g, color_b, color_a = color_rgba    
 
-    #回転前の頂点座標データ
-    v = []
-    # back face
-    v.append( glm.vec3(-box_vx, -box_vy, -box_vz) )    #0
-    v.append( glm.vec3( box_vx, -box_vy, -box_vz) )   #1
-    v.append( glm.vec3( box_vx,  box_vy, -box_vz) )   #2
-    v.append( glm.vec3(-box_vx,  box_vy, -box_vz) )   #3
-    # front face
-    v.append( glm.vec3(-box_vx, -box_vy,  box_vz) )   #4
-    v.append( glm.vec3( box_vx, -box_vy,  box_vz) )   #5
-    v.append( glm.vec3( box_vx,  box_vy,  box_vz) )   #6
-    v.append( glm.vec3(-box_vx,  box_vy,  box_vz) )   #7
-    # bottom face
-    v.append( glm.vec3(-box_vx, -box_vy,  box_vz) )   #8
-    v.append( glm.vec3( box_vx, -box_vy,  box_vz) )   #9
-    v.append( glm.vec3( box_vx, -box_vy, -box_vz) )   #10
-    v.append( glm.vec3(-box_vx, -box_vy, -box_vz) )   #11
-    # top face
-    v.append( glm.vec3( box_vx,  box_vy,  box_vz) )   #12
-    v.append( glm.vec3(-box_vx,  box_vy,  box_vz) )   #13
-    v.append( glm.vec3(-box_vx,  box_vy, -box_vz) )   #14
-    v.append( glm.vec3( box_vx,  box_vy, -box_vz) )   #15
-    # left face
-    v.append( glm.vec3(-box_vx, -box_vy,  box_vz) )   #16
-    v.append( glm.vec3(-box_vx,  box_vy,  box_vz) )   #17
-    v.append( glm.vec3(-box_vx,  box_vy, -box_vz) )   #18
-    v.append( glm.vec3(-box_vx, -box_vy, -box_vz) )   #19
-    # right face
-    v.append( glm.vec3( box_vx, -box_vy,  box_vz) )   #20
-    v.append( glm.vec3( box_vx,  box_vy,  box_vz) )   #21
-    v.append( glm.vec3( box_vx,  box_vy, -box_vz) )   #22
-    v.append( glm.vec3( box_vx, -box_vy, -box_vz) )   #23
+        #boxの頂点座標の計算
+        lx,ly,lz = body.boxsize
+        box_vx = lx * 0.5
+        box_vy = ly * 0.5
+        box_vz = lz * 0.5
 
-   #回転前の頂点の法線データ（面方向の法線）
-    n = []
-    for i in range(24):
-        if i < 4:
-            n.append(glm.vec3(  0,  0, -1)) # back face   # 0,1,2,3
-        elif i < 8:
-            n.append(glm.vec3(  0,  0,  1))  # front face   # 4,5,6,7
-        elif i < 12:
-            n.append(glm.vec3(  0, -1,  0))  # bottom face   # 8,9,10,11
-        elif i < 16:
-            n.append(glm.vec3(  0,  1,  0))  # top face   # 12,13,14,15
-        elif i < 20:
-            n.append(glm.vec3( -1,  0,  0))  # left face   # 16,17,18,19
-        elif i < 24:
-            n.append(glm.vec3(  1,  0,  0))  # right face   # 20,21,22,23
+        #回転前の頂点座標データ
+        v = []
+        # back face
+        v.append( glm.vec3(-box_vx, -box_vy, -box_vz) )    #0
+        v.append( glm.vec3( box_vx, -box_vy, -box_vz) )   #1
+        v.append( glm.vec3( box_vx,  box_vy, -box_vz) )   #2
+        v.append( glm.vec3(-box_vx,  box_vy, -box_vz) )   #3
+        # front face
+        v.append( glm.vec3(-box_vx, -box_vy,  box_vz) )   #4
+        v.append( glm.vec3( box_vx, -box_vy,  box_vz) )   #5
+        v.append( glm.vec3( box_vx,  box_vy,  box_vz) )   #6
+        v.append( glm.vec3(-box_vx,  box_vy,  box_vz) )   #7
+        # bottom face
+        v.append( glm.vec3(-box_vx, -box_vy,  box_vz) )   #8
+        v.append( glm.vec3( box_vx, -box_vy,  box_vz) )   #9
+        v.append( glm.vec3( box_vx, -box_vy, -box_vz) )   #10
+        v.append( glm.vec3(-box_vx, -box_vy, -box_vz) )   #11
+        # top face
+        v.append( glm.vec3( box_vx,  box_vy,  box_vz) )   #12
+        v.append( glm.vec3(-box_vx,  box_vy,  box_vz) )   #13
+        v.append( glm.vec3(-box_vx,  box_vy, -box_vz) )   #14
+        v.append( glm.vec3( box_vx,  box_vy, -box_vz) )   #15
+        # left face
+        v.append( glm.vec3(-box_vx, -box_vy,  box_vz) )   #16
+        v.append( glm.vec3(-box_vx,  box_vy,  box_vz) )   #17
+        v.append( glm.vec3(-box_vx,  box_vy, -box_vz) )   #18
+        v.append( glm.vec3(-box_vx, -box_vy, -box_vz) )   #19
+        # right face
+        v.append( glm.vec3( box_vx, -box_vy,  box_vz) )   #20
+        v.append( glm.vec3( box_vx,  box_vy,  box_vz) )   #21
+        v.append( glm.vec3( box_vx,  box_vy, -box_vz) )   #22
+        v.append( glm.vec3( box_vx, -box_vy, -box_vz) )   #23
 
-    # glm用（後でデータを入れ替える）の回転行列を作成
-    rotation_matrix = glm.rotate(glm.mat4(1.0), glm.radians(0), glm.vec3(0, 0, 1))
+        #回転前の頂点の法線データ（面方向の法線）
+        n = []
+        for i in range(24):
+            if i < 4:
+                n.append(glm.vec3(  0,  0, -1)) # back face   # 0,1,2,3
+            elif i < 8:
+                n.append(glm.vec3(  0,  0,  1))  # front face   # 4,5,6,7
+            elif i < 12:
+                n.append(glm.vec3(  0, -1,  0))  # bottom face   # 8,9,10,11
+            elif i < 16:
+                n.append(glm.vec3(  0,  1,  0))  # top face   # 12,13,14,15
+            elif i < 20:
+                n.append(glm.vec3( -1,  0,  0))  # left face   # 16,17,18,19
+            elif i < 24:
+                n.append(glm.vec3(  1,  0,  0))  # right face   # 20,21,22,23
 
-    #姿勢データを取得
-    R = body.getRotation()
-    #rot = np.array([[R[0], R[1], R[2], 0.0],
-    #                [R[3], R[4], R[5], 0.0],
-    #                [R[6], R[7], R[8], 0.0],
-    #                [   0,    0,    0, 1.0]])
-    
-    # glm用の回転行列に姿勢データを入れる
-    rotation_matrix[0,0] = R[0]
-    rotation_matrix[1,0] = R[1]
-    rotation_matrix[2,0] = R[2]
+        # glm用（後でデータを入れ替える）の回転行列を作成
+        rotation_matrix = glm.rotate(glm.mat4(1.0), glm.radians(0), glm.vec3(0, 0, 1))
 
-    rotation_matrix[0,1] = R[3]
-    rotation_matrix[1,1] = R[4]
-    rotation_matrix[2,1] = R[5]
-
-    rotation_matrix[0,2] = R[6]
-    rotation_matrix[1,2] = R[7]
-    rotation_matrix[2,2] = R[8]
-
-    # 回転行列からクォータニオンを生成
-    quaternion = glm.quat_cast(rotation_matrix)
-
-    #頂点座標の回転変換
-    vpx = []
-    vpy = []
-    vpz = []
-    for i in range(24):
-        rotated_vector = quaternion * v[i]    # 頂点座標を回転
-        x,y,z = rotated_vector #回転後の頂点座標
-        vpx.append(x)
-        vpy.append(y)
-        vpz.append(z)
-
-    #頂点の法線の回転変換
-    nx = []
-    ny = []
-    nz = []    
-    for i in range(24):
-        rotated_vector = quaternion * n[i]    # 頂点の法線を回転
-        x,y,z = glm.normalize(rotated_vector)
-        nx.append(x)
-        ny.append(y)
-        nz.append(z)
+        #姿勢データを取得
+        R = body.getRotation()
+        #rot = np.array([[R[0], R[1], R[2], 0.0],
+        #                [R[3], R[4], R[5], 0.0],
+        #                [R[6], R[7], R[8], 0.0],
+        #                [   0,    0,    0, 1.0]])
         
-    # Cube vertices and normals (position XYZ + normals)
-    px,py,pz = body.getPosition()   #boxの座標を取得
-    arr1 = np.array([], dtype=np.float32)
-    for i in range(24):                                  
-        arr2 = np.array([   vpx[i]+px, vpy[i]+py, vpz[i]+pz,    # positions
-                            nx[i], ny[i], nz[i],                # normals
-                            color_r, color_g, color_b, 1.0,     # color
-                            1.0, 1.0, 0.0],                     #uv and flag
-                            dtype=np.float32)
-        arr1 = np.append(arr1, arr2)
-    vertices_result = np.append(vertices, arr1)
-    
-    # Indices defining the 12 triangles composing the cube
-    if len(indices) == 0:
-        i = 0
-    else:
-        i = max(indices) + 1
-    arr3 = np.array([
-        0+i,1+i,2+i, 2+i,3+i,0+i,  # back face
-        4+i,5+i,6+i, 6+i,7+i,4+i,  # front face
-        8+i,9+i,10+i, 10+i,11+i,8+i,  # bottom face
-        12+i,13+i,14+i, 14+i,15+i,12+i,  # top face
-        16+i,17+i,18+i, 18+i,19+i,16+i,  # left face
-        20+i,21+i,22+i, 22+i,23+i,20+i   # right face
-    ], dtype=np.uint32)
-    indices_result = np.append(indices, arr3)
+        # glm用の回転行列に姿勢データを入れる
+        rotation_matrix[0,0] = R[0]
+        rotation_matrix[1,0] = R[1]
+        rotation_matrix[2,0] = R[2]
+
+        rotation_matrix[0,1] = R[3]
+        rotation_matrix[1,1] = R[4]
+        rotation_matrix[2,1] = R[5]
+
+        rotation_matrix[0,2] = R[6]
+        rotation_matrix[1,2] = R[7]
+        rotation_matrix[2,2] = R[8]
+
+        # 回転行列からクォータニオンを生成
+        quaternion = glm.quat_cast(rotation_matrix)
+
+        #頂点座標の回転変換
+        vpx = []
+        vpy = []
+        vpz = []
+        for i in range(24):
+            rotated_vector = quaternion * v[i]    # 頂点座標を回転
+            x,y,z = rotated_vector #回転後の頂点座標
+            vpx.append(x)
+            vpy.append(y)
+            vpz.append(z)
+
+        #頂点の法線の回転変換
+        nx = []
+        ny = []
+        nz = []    
+        for i in range(24):
+            rotated_vector = quaternion * n[i]    # 頂点の法線を回転
+            x,y,z = glm.normalize(rotated_vector)
+            nx.append(x)
+            ny.append(y)
+            nz.append(z)
+            
+        # Cube vertices and normals (position XYZ + normals)
+        px,py,pz = body.getPosition()   #boxの座標を取得
+        arr1 = np.array([], dtype=np.float32)
+        for i in range(24):                                  
+            arr2 = np.array([   vpx[i]+px, vpy[i]+py, vpz[i]+pz,        # positions
+                                nx[i], ny[i], nz[i],                    # normals
+                                color_r, color_g, color_b, color_a,     # color
+                                1.0, 1.0, 0.0],                         #uv and flag
+                                dtype=np.float32)
+            arr1 = np.append(arr1, arr2)
+        vertices_result = np.append(vertices, arr1)
+        
+        # Indices defining the 12 triangles composing the cube
+        if len(indices) == 0:
+            i = 0
+        else:
+            i = max(indices) + 1
+        arr3 = np.array([
+            0+i,1+i,2+i, 2+i,3+i,0+i,  # back face
+            4+i,5+i,6+i, 6+i,7+i,4+i,  # front face
+            8+i,9+i,10+i, 10+i,11+i,8+i,  # bottom face
+            12+i,13+i,14+i, 14+i,15+i,12+i,  # top face
+            16+i,17+i,18+i, 18+i,19+i,16+i,  # left face
+            20+i,21+i,22+i, 22+i,23+i,20+i   # right face
+        ], dtype=np.uint32)
+        indices_result = np.append(indices, arr3)
+
+    #cylinderの頂点データを作成
+    if body.shape == "cylinder":
+        #カラーの設定
+        color_r, color_g, color_b, color_a = color_rgba    
+
+        #boxの頂点座標の計算
+        r, h = body.cylindersize
+        v = []
+        for i in range( 0, 360, 36):
+            angle = radians(i)
+            cylinder_vx = r * cos(angle)
+            cylinder_vy = r * sin(angle)
+            cylinder_vz = 0.5 * h
+
+            #回転前の頂点座標データ
+            v.append( glm.vec3(cylinder_vx, cylinder_vy, cylinder_vz) )
+
+        for i in range( 0, 360, 36):
+            angle = radians(i)
+            cylinder_vx = r * cos(angle)
+            cylinder_vy = r * sin(angle)
+            cylinder_vz = -0.5 * h
+
+            #回転前の頂点座標データ
+            v.append( glm.vec3(cylinder_vx, cylinder_vy, cylinder_vz) )
+        v.append( glm.vec3(0, 0, 0.5 * h) ) #上天板の中心
+        v.append( glm.vec3(0, 0, -0.5 * h) ) #下天板の中心
+
+        #回転前の頂点の法線データ（面方向の法線）
+        n = []
+        for i in range( 0, 360, 36):
+            angle = radians(i)
+            cylinder_vx = cos(angle)
+            cylinder_vy = sin(angle)
+            cylinder_vz = 0
+
+            #回転前の頂点座標データ
+            n.append( glm.vec3(cylinder_vx, cylinder_vy, cylinder_vz) )
+
+        for i in range( 0, 360, 36):
+            angle = radians(i)
+            cylinder_vx = cos(angle)
+            cylinder_vy = sin(angle)
+            cylinder_vz = 0
+
+            #回転前の頂点座標データ
+            n.append( glm.vec3(cylinder_vx, cylinder_vy, cylinder_vz) )
+        n.append( glm.vec3(0, 0, 1) ) #上天板の中心
+        n.append( glm.vec3(0, 0, -1) ) #下天板の中心
+
+        # glm用（後でデータを入れ替える）の回転行列を作成
+        rotation_matrix = glm.rotate(glm.mat4(1.0), glm.radians(0), glm.vec3(0, 0, 1))
+
+        #姿勢データを取得
+        R = body.getRotation()
+        #rot = np.array([[R[0], R[1], R[2], 0.0],
+        #                [R[3], R[4], R[5], 0.0],
+        #                [R[6], R[7], R[8], 0.0],
+        #                [   0,    0,    0, 1.0]])
+        
+        # glm用の回転行列に姿勢データを入れる
+        rotation_matrix[0,0] = R[0]
+        rotation_matrix[1,0] = R[1]
+        rotation_matrix[2,0] = R[2]
+
+        rotation_matrix[0,1] = R[3]
+        rotation_matrix[1,1] = R[4]
+        rotation_matrix[2,1] = R[5]
+
+        rotation_matrix[0,2] = R[6]
+        rotation_matrix[1,2] = R[7]
+        rotation_matrix[2,2] = R[8]
+
+        # 回転行列からクォータニオンを生成
+        quaternion = glm.quat_cast(rotation_matrix)
+
+        #頂点座標の回転変換
+        vpx = []
+        vpy = []
+        vpz = []
+        for i in range(22):
+            rotated_vector = quaternion * v[i]    # 頂点座標を回転
+            x,y,z = rotated_vector #回転後の頂点座標
+            vpx.append(x)
+            vpy.append(y)
+            vpz.append(z)
+
+        #頂点の法線の回転変換
+        nx = []
+        ny = []
+        nz = []    
+        for i in range(22):
+            rotated_vector = quaternion * n[i]    # 頂点の法線を回転
+            x,y,z = glm.normalize(rotated_vector)
+            nx.append(x)
+            ny.append(y)
+            nz.append(z)
+            
+        # Cube vertices and normals (position XYZ + normals)
+        px,py,pz = body.getPosition()   #boxの座標を取得
+        arr1 = np.array([], dtype=np.float32)
+        for i in range(22):                                  
+            arr2 = np.array([   vpx[i]+px, vpy[i]+py, vpz[i]+pz,        # positions
+                                nx[i], ny[i], nz[i],                    # normals
+                                color_r, color_g, color_b, color_a,     # color
+                                1.0, 1.0, 0.0],                         #uv and flag
+                                dtype=np.float32)
+            arr1 = np.append(arr1, arr2)
+        vertices_result = np.append(vertices, arr1)
+        
+        # Indices defining the 12 triangles composing the cube
+        if len(indices) == 0:
+            i = 0
+        else:
+            i = max(indices) + 1
+        arr3 = np.array([
+            #側面
+            0+i,1+i,11+i, 11+i,10+i,0+i,  
+            1+i,2+i,12+i, 12+i,11+i,1+i,  
+            2+i,3+i,13+i, 13+i,12+i,2+i,  
+            3+i,4+i,14+i, 14+i,13+i,3+i,  
+            4+i,5+i,15+i, 15+i,14+i,4+i,  
+            5+i,6+i,16+i, 16+i,15+i,5+i,  
+            6+i,7+i,17+i, 17+i,16+i,6+i,  
+            7+i,8+i,18+i, 18+i,17+i,7+i,  
+            8+i,9+i,19+i, 19+i,18+i,8+i,  
+            9+i,0+i,10+i, 10+i,19+i,9+i,
+            #天板
+            20+i,0+i,1+i,  21+i,10+i,11+i,
+            20+i,1+i,2+i,  21+i,11+i,12+i,
+            20+i,2+i,3+i,  21+i,12+i,13+i,
+            20+i,3+i,4+i,  21+i,13+i,14+i,
+            20+i,4+i,5+i,  21+i,14+i,15+i,
+            20+i,5+i,6+i,  21+i,15+i,16+i,
+            20+i,6+i,7+i,  21+i,16+i,17+i,
+            20+i,7+i,8+i,  21+i,17+i,18+i,
+            20+i,8+i,9+i,  21+i,18+i,19+i,
+            20+i,9+i,0+i,  21+i,19+i,10+i
+        ], dtype=np.uint32)
+        indices_result = np.append(indices, arr3)
+
+
 
     return vertices_result, indices_result
 
@@ -534,72 +682,73 @@ objcount = 0
 lasttime = time.time()
 
 # 箱ロボットの初期位置
-box_robo_start_x = 2.0
-box_robo_start_z = 2.0
+sx = 2.0
+sz = 2.0
 
-
-#オブジェクトの初期設定
+#odeオブジェクト描画の初期設定
 init_object = []
-                    #name               #shape                  #position
-init_object.append(["box",              ( 1.30, 0.2, 1.70),     (  3.8,  0.7,  0.82)])      #0 : 机の天板
-init_object.append(["box",              ( 0.15, 0.6, 0.15),     (  3.3,  0.3,  0.00)])    #1 : 机の脚
-init_object.append(["box",              ( 0.15, 0.6, 0.15),     (  4.3,  0.3,  0.00)])    #2 : 机の脚
-init_object.append(["box",              ( 1.00, 0.6, 0.50),     (  3.8,  0.3,  1.40)])      #3 : 机の引き出し
-init_object.append(["box",              ( 1.00, 0.1, 2.00),     ( -3.7,  0.6,  1.00)])      #4 : 棚の天板1
-init_object.append(["box",              ( 1.00, 0.1, 2.00),     ( -3.7,  1.0,  1.00)])      #5 : 棚の天板2
-init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -4.2,  0.5,  0.00)])     #6 : 棚の脚
-init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -3.2,  0.5,  0.00)])     #7 : 棚の脚
-init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -3.2,  0.5,  2.00)])     #8 : 棚の脚
-init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -4.2,  0.5,  2.00)])     #9 : 棚の脚
-init_object.append(["cylinder",         ( 0.15, 0.1),           ( box_robo_start_x + 0.0, 0.15, box_robo_start_z + 0.17 )])     #10 : 二輪箱ロボットの車輪
-init_object.append(["cylinder",         ( 0.15, 0.1),           ( box_robo_start_x + 0.0, 0.15, box_robo_start_z - 0.17 )])     #11 : 二輪箱ロボットの車輪
-init_object.append(["box_robo",         ( 0.3, 0.28, 0.2),      (  box_robo_start_x + 0.0, 0.15, box_robo_start_z + 0.0 )])      #12 : 二輪箱ロボットの箱
-init_object.append(["box_gaze_point",   ( 0.05, 0.05, 0.05),    (  box_robo_start_x - 0.3, 0.15, box_robo_start_z + 0.0 )])      #13 : 注視点用box
+                    #name               #shape                  #position                       #color
+init_object.append(["cylinder_z",       ( 0.15, 0.1),           ( sx + 0.0, 0.15, sz + 0.17 ),  ( 0.3, 0.3, 1.0, 1.0)])     #0 : 二輪箱ロボットの車輪
+init_object.append(["cylinder_z",       ( 0.15, 0.1),           ( sx + 0.0, 0.15, sz - 0.17 ),  ( 0.3, 0.3, 1.0, 1.0)])     #1 : 二輪箱ロボットの車輪
+init_object.append(["box_robo",         ( 0.30, 0.28, 0.2),     ( sx + 0.0, 0.15, sz + 0.0 ),   ( 0.5, 0.9, 0.1, 1.0)])     #2 : 二輪箱ロボットの箱
+init_object.append(["box_gaze_point",   ( 0.05, 0.05, 0.05),    ( sx - 0.3, 0.15, sz + 0.0 ),   ( 0.5, 0.9, 0.1, 1.0)])     #3 : 注視点用box。描画しない。
+init_object.append(["box",              ( 1.30, 0.2, 1.70),     (  3.8,  0.7,  0.82),           ( 0.4, 0.23, 0.2, 1.0)])    #4 : 机の天板
+init_object.append(["box",              ( 0.15, 0.6, 0.15),     (  3.3,  0.3,  0.00),           ( 0.4, 0.23, 0.2, 1.0)])    #5 : 机の脚
+init_object.append(["box",              ( 0.15, 0.6, 0.15),     (  4.3,  0.3,  0.00),           ( 0.4, 0.23, 0.2, 1.0)])    #6 : 机の脚
+init_object.append(["box",              ( 1.00, 0.6, 0.50),     (  3.8,  0.3,  1.40),           ( 0.4, 0.23, 0.2, 1.0)])    #7 : 机の引き出し
+init_object.append(["box",              ( 1.00, 0.1, 2.00),     ( -3.7,  0.6,  1.00),           ( 0.2, 0.20, 0.2, 1.0)])    #8 : 棚の天板1
+init_object.append(["box",              ( 1.00, 0.1, 2.00),     ( -3.7,  1.0,  1.00),           ( 0.2, 0.20, 0.2, 1.0)])    #9 : 棚の天板2
+init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -4.2,  0.5,  0.00),           ( 0.2, 0.20, 0.2, 1.0)])    #10 : 棚の脚
+init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -3.2,  0.5,  0.00),           ( 0.2, 0.20, 0.2, 1.0)])    #11 : 棚の脚
+init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -3.2,  0.5,  2.00),           ( 0.2, 0.20, 0.2, 1.0)])    #12 : 棚の脚
+init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -4.2,  0.5,  2.00),           ( 0.2, 0.20, 0.2, 1.0)])    #13 : 棚の脚
+init_object.append(["cylinder_y",       ( 0.4, 0.1),            ( 0.0, 0.05, 2.0 ),             ( 0.8, 0.8, 0.8, 1.0)])     #14 : 
 
 #オブジェクトをbodies[]とgeoms[]に入れる
-for iob in init_object:
+for iob in init_object: # iob  = [ name, shape, position, color ]
     # 車輪
-    if iob[0] == "cylinder": 
+    if iob[0] == "cylinder_z":    # iob[0]はname
         drop_cylinder(1, iob, 10)  #(rotation_num, init_object[i], density)
     # 車輪以外
     else:
-        drop_box(iob, 1.0) #drop_box_robo(init_object[i], density)
+        if iob[0] == "cylinder_y":  # iob[0]はname
+            drop_cylinder(2, iob, 10)  #(rotation_num, init_object[i], density)
+        else:
+            drop_box(iob, 1.0) #drop_box_robo(init_object[i], density)
 
-#固定ジョイントの作成
-fixed_joints=[]
-for i in range(11):
-    #障害物オブジェクトの固定ジョイントの作成
-    if i < 10: 
-        fixed_joints.append(ode.FixedJoint(world))
-        fixed_joints[i].attach(bodies[i], None)  #障害物オブジェクトをその場に固定
-        fixed_joints[i].setFixed()
-    #箱と注視点boxの固定ジョイントの作成
-    if i == 10:
-        fixed_joints.append(ode.FixedJoint(world))
-        fixed_joints[i].attach(bodies[12], bodies[13])  #箱と注視点boxを固定
-        fixed_joints[i].setFixed()
-
-#ヒンジジョイントの作成
+#二輪箱ロボットのヒンジジョイントの作成
 hinge2_joints=[]
 #二輪箱ロボットの車輪のヒンジ2ジョイント 1
 hinge2_joints.append(ode.Hinge2Joint(world))
-hinge2_joints[0].attach(bodies[12], bodies[10])
-hinge2_joints[0].setAnchor((box_robo_start_x + 0.0, 0.15, box_robo_start_z + 0.0))
+hinge2_joints[0].attach(bodies[2], bodies[0])
+hinge2_joints[0].setAnchor((sx + 0.0, 0.15, sz + 0.0))
 hinge2_joints[0].setAxis1((0, 0, 1))  # Set the first axis (e.g., wheel rotation)
 hinge2_joints[0].setAxis2((0, 1, 0))  # Set the second axis (e.g., suspension/steering)
 # 第2軸の回転を固定
 hinge2_joints[0].setParam(ode.ParamVel2, 0)  # 速度をゼロに設定
 hinge2_joints[0].setParam(ode.ParamFMax2, 1000)  # 強い力で固定
-
 #二輪箱ロボットの車輪のヒンジ2ジョイント 2
 hinge2_joints.append(ode.Hinge2Joint(world))
-hinge2_joints[1].attach(bodies[12], bodies[11])
-hinge2_joints[1].setAnchor((box_robo_start_x + 0.0, 0.15, box_robo_start_z + 0.0))
+hinge2_joints[1].attach(bodies[2], bodies[1])
+hinge2_joints[1].setAnchor((sx + 0.0, 0.15, sz + 0.0))
 hinge2_joints[1].setAxis1((0, 0, 1))  # Set the first axis (e.g., wheel rotation)
 hinge2_joints[1].setAxis2((0, 1, 0))  # Set the second axis (e.g., suspension/steering)
 # 第2軸の回転を固定
 hinge2_joints[1].setParam(ode.ParamVel2, 0)  # 速度をゼロに設定
 hinge2_joints[1].setParam(ode.ParamFMax2, 1000)  # 強い力で固定
+
+#固定ジョイントの作成
+fixed_joints=[]
+#箱ロボットと注視点boxの固定ジョイントの作成
+fixed_joints.append(ode.FixedJoint(world))
+fixed_joints[0].attach(bodies[2], bodies[3])  #箱と注視点boxを固定
+fixed_joints[0].setFixed()
+#障害物オブジェクトの固定ジョイントの作成
+for index, b in enumerate(bodies):
+    if index >3: 
+        fixed_joints.append(ode.FixedJoint(world))
+        fixed_joints[len(fixed_joints)-1].attach(b, None)  #障害物オブジェクトをその場に固定
+        fixed_joints[len(fixed_joints)-1].setFixed()
 
 
 #シェーダーで描画
@@ -610,11 +759,11 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
 
     #床と壁の頂点データを作成
     #床と壁のverticesデータを作成
-                           # positions        # normals        # color               #uv and flag
-    floor_arr = np.array([  4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1, 1.0,   4.5, 4.5, 0.7,   #床 0
-                            4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1, 1.0,   4.5, 0.0, 0.7,   #床 1
-                           -4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1, 1.0,   0.0, 4.5, 0.7,   #床 2
-                           -4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   0.5, 0.3, 0.1, 1.0,   0.0, 0.0, 0.7,   #床 3
+                           # positions        # normals         # color               # texture_uv and flag
+    floor_arr = np.array([  4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   1.0, 1.0, 1.0, 1.0,   4.5, 4.5, 0.7,   #床 0
+                            4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   1.0, 1.0, 1.0, 1.0,   4.5, 0.0, 0.7,   #床 1
+                           -4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   1.0, 1.0, 1.0, 1.0,   0.0, 4.5, 0.7,   #床 2
+                           -4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   1.0, 1.0, 1.0, 1.0,   0.0, 0.0, 0.7,   #床 3
 
                            -4.5, 0.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0, 1.0,   0.0, 0.0, 1.0,   #壁奥 4
                             4.5, 0.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0, 1.0,   4.5, 0.0, 1.0,   #壁奥 5
@@ -634,7 +783,7 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
                            -4.5, 0.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0, 1.0,   0.0, 0.0, 1.0,   #壁手前 16
                             4.5, 0.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0, 1.0,   4.5, 0.0, 1.0,   #壁手前 17
                            -4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0, 1.0,   0.0, 1.0, 1.0,   #壁手前 18
-                            4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0, 1.0,   4.5, 1.0, 1.0   #壁手前 19
+                            4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0, 1.0,   4.5, 1.0, 1.0    #壁手前 19
                            ], dtype=np.float32)
     vertices = np.append(vertices, floor_arr)
     #床と壁のIndicesデータを作成
@@ -651,20 +800,13 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     indices = np.append(indices, arr3)
 
 
-    #障害物オブジェクトの頂点データを作成
+    #odeオブジェクトの頂点データを作成
     for index, b in enumerate(bodies):
-        #カラーの設定
-        if index < 4:
-            color_r, color_g, color_b = ( 0.4, 0.23, 0.2)            
-        elif index < 10:
-            color_r, color_g, color_b = ( 0.2, 0.2, 0.2)
-        elif index == 12 or  index == 13:
-            color_r, color_g, color_b = (  0.5, 0.9, 0.1)
-
-        #bodyの頂点データを作成
-        if index < 10 or index == 12:#車輪（10番、11番）と注視点用box（13番）を描画しない
+        if index == 3:#注視点用boxを描画しない
+            pass
+        else:
             #bodyの頂点データを作成
-            vertices, indices = draw_body(b, vertices, indices, color_r, color_g, color_b)
+            vertices, indices = draw_body(b, vertices, indices, init_object[index][3])  # init_object[index][3]は、colorのデータ
 
     glBindVertexArray(VAO)
 
@@ -688,15 +830,15 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(6 * vertices.itemsize))
     glEnableVertexAttribArray(2)
 
-    # color opacity
+    # color opacity attribute
     glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(9 * vertices.itemsize))
     glEnableVertexAttribArray(3)
 
-    # uv
+    # uv attribute
     glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(10 * vertices.itemsize))
     glEnableVertexAttribArray(4)
 
-    # uv flag
+    # uv flag attribute
     glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(12 * vertices.itemsize))
     glEnableVertexAttribArray(5)
 
@@ -754,7 +896,7 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
     #glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
     glUniformMatrix4fv(proj_loc, 1, GL_FALSE, projection)
-    glUniform3f(light_dir_loc, 0.0, -3.0, -1.0)  # ディレクショナルライトの方向例
+    glUniform3f(light_dir_loc, 0.0, -3.0, 1.0)  # ディレクショナルライトの方向例
     glUniform3f(light_color_loc, 1.0, 1.0, 1.0)  # 白色光
     #glUniform3f(object_color_loc, 1.0, 0.5, 0.31) # オブジェクトの色
     #glUniform3f(view_pos_loc, 0.0, 0.0, 3.0)     # カメラ位置例
@@ -802,8 +944,8 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     glViewport(340, 10, 320, 320)    
     view = np.identity(4, dtype=np.float32)
 
-    robo_x, robo_y, robo_z = bodies[12].getPosition()   #boxの座標を取得
-    gaze_x, gaze_y, gaze_z = bodies[13].getPosition()   #boxの座標を取得
+    robo_x, robo_y, robo_z = bodies[2].getPosition()   #boxの座標を取得
+    gaze_x, gaze_y, gaze_z = bodies[3].getPosition()   #boxの座標を取得
 
     #glm.lookat()でカメラの設定
     cameraPos = glm.vec3( robo_x, robo_y, robo_z)
@@ -843,6 +985,19 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
 def main():
     global counter, state, lasttime
     global bodies, geoms
+
+
+
+    #テクスチャ読み込み#
+    tex_floor = load_texture("sample1.png")
+    tex_wall = load_texture("sample2.png")
+    # テクスチャ0にバインド
+    glActiveTexture(GL_TEXTURE0)
+    glBindTexture(GL_TEXTURE_2D, tex_floor)
+    # テクスチャ1にバインド
+    glActiveTexture(GL_TEXTURE1)
+    glBindTexture(GL_TEXTURE_2D, tex_wall)
+
 
     #透明表現を有効にする
     glEnable(GL_BLEND)
@@ -926,7 +1081,8 @@ def main():
         for i in range(n):
 
             for g1 in geoms:
-                    near_callback((world,contactgroup), g1, geoms[12]) # geoms[12]はbox_robo
+                for i in range(0,3):
+                    near_callback((world,contactgroup), g1, geoms[i]) # geoms[2]はbox_robo
 
             for g1 in geoms:
                 near_callback((world,contactgroup), g1, floor)
@@ -945,6 +1101,12 @@ def main():
     glDeleteBuffers(1, [VBO])
     glDeleteBuffers(1, [EBO])
 
+    # Unbind texture
+    glActiveTexture(GL_TEXTURE0)
+    glBindTexture(GL_TEXTURE_2D, 0)  # Unbind texture
+    glActiveTexture(GL_TEXTURE1)
+    glBindTexture(GL_TEXTURE_2D, 0)  # Unbind texture
+
     glfw.terminate()
 
 if __name__ == "__main__":
@@ -958,20 +1120,4 @@ if __name__ == "__main__":
     Learned_model.load_state_dict(torch.load("Weight1.pth", weights_only=True))
     Learned_model.eval()  # 推論モードに切り替え
 
-    #テクスチャ読み込み#
-    tex_floor = load_texture("sample1.png")
-    tex_wall = load_texture("sample2.png")
-    # テクスチャ0にバインド
-    glActiveTexture(GL_TEXTURE0)
-    glBindTexture(GL_TEXTURE_2D, tex_floor)
-    # テクスチャ1にバインド
-    glActiveTexture(GL_TEXTURE1)
-    glBindTexture(GL_TEXTURE_2D, tex_wall)
-
     main()
-
-    # Unbind texture
-    glActiveTexture(GL_TEXTURE0)
-    glBindTexture(GL_TEXTURE_2D, 0)  # Unbind texture
-    glActiveTexture(GL_TEXTURE1)
-    glBindTexture(GL_TEXTURE_2D, 0)  # Unbind texture
