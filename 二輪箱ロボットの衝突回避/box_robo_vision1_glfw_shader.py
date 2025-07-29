@@ -280,25 +280,25 @@ def draw_body(body, vertices, indices, color_rgba):
     if body.shape == "cylinder":
         #カラーの設定
         color_r, color_g, color_b, color_a = color_rgba    
-
+        rad_num = 10
+        drad = 360/rad_num
         #boxの頂点座標の計算
         r, h = body.cylindersize
         v = []
-        for i in range( 0, 360, 36):
-            angle = radians(i)
+        #上側
+        for i in range(rad_num):
+            angle = radians( i * drad )
             cylinder_vx = r * cos(angle)
             cylinder_vy = r * sin(angle)
             cylinder_vz = 0.5 * h
-
             #回転前の頂点座標データ
-            v.append( glm.vec3(cylinder_vx, cylinder_vy, cylinder_vz) )
-
-        for i in range( 0, 360, 36):
-            angle = radians(i)
+            v.append( glm.vec3(cylinder_vx, cylinder_vy, cylinder_vz) ) 
+        #下側
+        for i in range(rad_num):
+            angle = radians( i * drad )
             cylinder_vx = r * cos(angle)
             cylinder_vy = r * sin(angle)
             cylinder_vz = -0.5 * h
-
             #回転前の頂点座標データ
             v.append( glm.vec3(cylinder_vx, cylinder_vy, cylinder_vz) )
         v.append( glm.vec3(0, 0, 0.5 * h) ) #上天板の中心
@@ -306,22 +306,21 @@ def draw_body(body, vertices, indices, color_rgba):
 
         #回転前の頂点の法線データ（面方向の法線）
         n = []
-        for i in range( 0, 360, 36):
-            angle = radians(i)
+        #上側
+        for i in range(rad_num):
+            angle = radians( i * drad )
             cylinder_vx = cos(angle)
             cylinder_vy = sin(angle)
             cylinder_vz = 0
-
-            #回転前の頂点座標データ
+            #回転前の頂点の法線データ
             n.append( glm.vec3(cylinder_vx, cylinder_vy, cylinder_vz) )
-
-        for i in range( 0, 360, 36):
-            angle = radians(i)
+        #下側
+        for i in range(rad_num):
+            angle = radians( i * drad )
             cylinder_vx = cos(angle)
             cylinder_vy = sin(angle)
             cylinder_vz = 0
-
-            #回転前の頂点座標データ
+            #回転前の頂点の法線データ
             n.append( glm.vec3(cylinder_vx, cylinder_vy, cylinder_vz) )
         n.append( glm.vec3(0, 0, 1) ) #上天板の中心
         n.append( glm.vec3(0, 0, -1) ) #下天板の中心
@@ -356,7 +355,7 @@ def draw_body(body, vertices, indices, color_rgba):
         vpx = []
         vpy = []
         vpz = []
-        for i in range(22):
+        for i in range(rad_num*2+2):
             rotated_vector = quaternion * v[i]    # 頂点座標を回転
             x,y,z = rotated_vector #回転後の頂点座標
             vpx.append(x)
@@ -367,17 +366,17 @@ def draw_body(body, vertices, indices, color_rgba):
         nx = []
         ny = []
         nz = []    
-        for i in range(22):
+        for i in range(rad_num*2+2):
             rotated_vector = quaternion * n[i]    # 頂点の法線を回転
             x,y,z = glm.normalize(rotated_vector)
             nx.append(x)
             ny.append(y)
             nz.append(z)
             
-        # Cube vertices and normals (position XYZ + normals)
-        px,py,pz = body.getPosition()   #boxの座標を取得
+        # cylinder vertices and normals (position XYZ + normals)
+        px,py,pz = body.getPosition()   #cylinderの座標を取得
         arr1 = np.array([], dtype=np.float32)
-        for i in range(22):                                  
+        for i in range(rad_num*2+2):                                  
             arr2 = np.array([   vpx[i]+px, vpy[i]+py, vpz[i]+pz,        # positions
                                 nx[i], ny[i], nz[i],                    # normals
                                 color_r, color_g, color_b, color_a,     # color
@@ -386,11 +385,57 @@ def draw_body(body, vertices, indices, color_rgba):
             arr1 = np.append(arr1, arr2)
         vertices_result = np.append(vertices, arr1)
         
-        # Indices defining the 12 triangles composing the cube
+        # Indices defining the triangles composing the cylinder
         if len(indices) == 0:
             i = 0
         else:
             i = max(indices) + 1
+        #cylinder側面のindices
+        arr3 = np.array( [], dtype=np.uint32 )
+        for s in range( rad_num ):
+            if s < rad_num - 1:
+                #cylinder側面のindices
+                arr4 = np.array([     s + 0 + i,
+                                      s + 1 + i,
+                                      s + 1 + rad_num + i,
+
+                                      s + 1 + rad_num + i,
+                                      s + rad_num + i,
+                                      s + 0 + i ], dtype=np.uint32)
+            else:
+                #cylinder側面のindicesのつなぎ目
+                arr4 = np.array([ rad_num - 1 + i,
+                                      0 + i,
+                                      rad_num + i,
+
+                                      rad_num + i, 
+                                      rad_num * 2 -1 + i,
+                                      rad_num - 1 + i ], dtype=np.uint32)                
+            arr3 = np.append(arr3, arr4)
+
+        #cylinder天板のindices
+        for s in range( rad_num ):
+            if s < rad_num - 1:
+                #cylinder天板のindices
+                arr4 = np.array([ rad_num * 2 + i,
+                                  s + 0 + i,
+                                  s + 1 + i,
+
+                                  rad_num * 2 + 1 + i,
+                                  s + rad_num + i,
+                                  s + rad_num + 1 + i ], dtype=np.uint32)
+            else:
+                #cylinder天板のindicesのつなぎ目
+                arr4 = np.array([rad_num * 2 + i,
+                                 rad_num - 1 + i,
+                                 0+i,
+                                   
+                                 rad_num * 2 + 1 + i,
+                                 rad_num * 2 - 1 + i,
+                                 rad_num + i], dtype=np.uint32)
+            arr3 = np.append(arr3, arr4)
+
+        """
         arr3 = np.array([
             #側面
             0+i,1+i,11+i, 11+i,10+i,0+i,  
@@ -415,9 +460,8 @@ def draw_body(body, vertices, indices, color_rgba):
             20+i,8+i,9+i,  21+i,18+i,19+i,
             20+i,9+i,0+i,  21+i,19+i,10+i
         ], dtype=np.uint32)
+        """
         indices_result = np.append(indices, arr3)
-
-
 
     return vertices_result, indices_result
 
@@ -702,7 +746,16 @@ init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -4.2,  0.5,  0
 init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -3.2,  0.5,  0.00),           ( 0.2, 0.20, 0.2, 1.0)])    #11 : 棚の脚
 init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -3.2,  0.5,  2.00),           ( 0.2, 0.20, 0.2, 1.0)])    #12 : 棚の脚
 init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -4.2,  0.5,  2.00),           ( 0.2, 0.20, 0.2, 1.0)])    #13 : 棚の脚
-init_object.append(["cylinder_y",       ( 0.4, 0.1),            ( 0.0, 0.05, 2.0 ),             ( 0.8, 0.8, 0.8, 1.0)])     #14 : 
+init_object.append(["cylinder_y",       ( 0.4, 0.1),            (  0.0,  0.05, 2.0 ),           ( 0.8, 0.8, 0.8, 1.0)])     #14 : 扇風機の足1
+init_object.append(["cylinder_y",       ( 0.1, 0.6),            (  0.0,  0.3,  2.0 ),           ( 0.8, 0.8, 0.8, 1.0)])     #15 : 扇風機の足2
+init_object.append(["cylinder_z",       ( 0.3, 0.1),            (  0.0,  0.7,  1.75),           ( 0.8, 0.8, 0.8, 1.0)])     #16 : 扇風機の頭1
+init_object.append(["cylinder_z",       ( 0.1, 0.4),            (  0.0,  0.7,  2.0 ),           ( 0.8, 0.8, 0.8, 1.0)])     #17 : 扇風機の頭2
+init_object.append(["box",              ( 2.2,  0.2, 1.20),     (  1.0,  0.3, -3.5 ),           ( 0.5, 0.5, 0.5, 1.0)])     #18 : #ベッドの天板
+init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  0.0,  0.1, -4.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #19 : #ベッドの足
+init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  2.0,  0.1, -4.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #20 : #ベッドの足
+init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  2.0,  0.1, -3.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #21 : #ベッドの足
+init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  0.0,  0.1, -3.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #22 : #ベッドの足
+
 
 #オブジェクトをbodies[]とgeoms[]に入れる
 for iob in init_object: # iob  = [ name, shape, position, color ]
