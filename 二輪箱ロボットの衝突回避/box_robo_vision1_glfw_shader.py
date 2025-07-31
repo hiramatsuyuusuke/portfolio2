@@ -1,5 +1,5 @@
 #ODE-0.16.4のtutorial3.pyを書き換えたコードです。
-#https://hiramatsuyuusuke.github.io/portfolio2/product3.html
+#https://hiramatsuyuusuke.github.io/portfolio2/product1.html
 
 import sys, os, random, time
 from math import *
@@ -64,15 +64,10 @@ in float UV_flag;
 
 out vec4 FragColor;
 
-
 uniform vec3 lightDir;    // 光源の方向（正規化済み）
 uniform vec3 lightColor;
-//uniform vec3 objectColor;
-//uniform vec3 viewPos;
-
 uniform sampler2D texture0;
 uniform sampler2D texture1;
-
 
 void main()
 {
@@ -86,11 +81,12 @@ void main()
     float diff = max(dot(norm, lightDirection), 0.0);
 
     // 環境光のみ簡易実装
-    vec3 ambient = 0.95 * lightColor;
+    vec3 ambient = 0.7 * lightColor;
 
     // 拡散光強度分だけ色乗算
     vec3 diffuse = diff * lightColor;
 
+    //テクスチャの切り替え
     if (UV_flag<0.5)
     {
         vec3 result = (ambient + diffuse) * Color;
@@ -141,6 +137,7 @@ def create_shader_program():
 def draw_body(body, vertices, indices, color_rgba):
     """Draw an ODE body.
     """
+    ##################################################################
     #boxの頂点データを作成
     if body.shape == "box":
         #カラーの設定
@@ -276,52 +273,42 @@ def draw_body(body, vertices, indices, color_rgba):
         ], dtype=np.uint32)
         indices_result = np.append(indices, arr3)
 
-    #cylinderの頂点データを作成
+    ##################################################################
+    #cylinderの頂点データを作成。シリンダーオブジェクトの座標は重心座標。
     if body.shape == "cylinder":
-        #カラーの設定
-        color_r, color_g, color_b, color_a = color_rgba    
-        rad_num = 10
-        drad = 360/rad_num
-        #boxの頂点座標の計算
-        r, h = body.cylindersize
-        v = []
-        #上側
-        for i in range(rad_num):
-            angle = radians( i * drad )
-            cylinder_vx = r * cos(angle)
-            cylinder_vy = r * sin(angle)
-            cylinder_vz = 0.5 * h
-            #回転前の頂点座標データ
-            v.append( glm.vec3(cylinder_vx, cylinder_vy, cylinder_vz) ) 
-        #下側
-        for i in range(rad_num):
-            angle = radians( i * drad )
-            cylinder_vx = r * cos(angle)
-            cylinder_vy = r * sin(angle)
-            cylinder_vz = -0.5 * h
-            #回転前の頂点座標データ
-            v.append( glm.vec3(cylinder_vx, cylinder_vy, cylinder_vz) )
+        color_r, color_g, color_b, color_a = color_rgba     #カラー
+        rad_num = 10    #円周方向の分割数
+        height_num = 2    #高さ方向の分割数
+        drad = 360/rad_num  #円周方向の刻み幅
+        r, h = body.cylindersize    #
+        v = []  #頂点座標のリスト
+        #回転前のcylinderの頂点座標の計算
+        for hn in range(height_num + 1):    #高さ方向
+            for rn in range(rad_num):       #円周方向
+                angle = radians( rn * drad )
+                cylinder_vx = r * cos(angle)
+                cylinder_vy = r * sin(angle)
+                cylinder_vz = ( h/float(height_num) )*hn - 0.5*h    #オブジェクト座標を重心にする
+                #回転前の頂点座標データをリストに追加
+                v.append( glm.vec3(cylinder_vx, cylinder_vy, cylinder_vz) ) 
         v.append( glm.vec3(0, 0, 0.5 * h) ) #上天板の中心
         v.append( glm.vec3(0, 0, -0.5 * h) ) #下天板の中心
 
-        #回転前の頂点の法線データ（面方向の法線）
-        n = []
-        #上側
-        for i in range(rad_num):
-            angle = radians( i * drad )
-            cylinder_vx = cos(angle)
-            cylinder_vy = sin(angle)
-            cylinder_vz = 0
-            #回転前の頂点の法線データ
-            n.append( glm.vec3(cylinder_vx, cylinder_vy, cylinder_vz) )
-        #下側
-        for i in range(rad_num):
-            angle = radians( i * drad )
-            cylinder_vx = cos(angle)
-            cylinder_vy = sin(angle)
-            cylinder_vz = 0
-            #回転前の頂点の法線データ
-            n.append( glm.vec3(cylinder_vx, cylinder_vy, cylinder_vz) )
+        #回転前の頂点の法線データ
+        n = []  #法線データのリスト
+        for hn in range(height_num + 1):    #高さ方向
+            for i in range(rad_num):        #円周方向
+                angle = radians( i * drad )
+                cylinder_vx = cos(angle)
+                cylinder_vy = sin(angle)
+                if hn == 0:
+                    cylinder_vz = 0 # -1    #一番下の法線のz成分
+                elif hn == height_num:
+                    cylinder_vz = 0 # 1     #一番上の法線のz成分
+                else:
+                    cylinder_vz = 0         #
+                #回転前の頂点の法線データ
+                n.append( glm.vec3(cylinder_vx, cylinder_vy, cylinder_vz) )
         n.append( glm.vec3(0, 0, 1) ) #上天板の中心
         n.append( glm.vec3(0, 0, -1) ) #下天板の中心
 
@@ -355,7 +342,7 @@ def draw_body(body, vertices, indices, color_rgba):
         vpx = []
         vpy = []
         vpz = []
-        for i in range(rad_num*2+2):
+        for i in range(rad_num*(height_num + 1)+2): # +2は上下の天板の分
             rotated_vector = quaternion * v[i]    # 頂点座標を回転
             x,y,z = rotated_vector #回転後の頂点座標
             vpx.append(x)
@@ -366,7 +353,7 @@ def draw_body(body, vertices, indices, color_rgba):
         nx = []
         ny = []
         nz = []    
-        for i in range(rad_num*2+2):
+        for i in range(rad_num*(height_num + 1)+2): # +2は上下の天板の分
             rotated_vector = quaternion * n[i]    # 頂点の法線を回転
             x,y,z = glm.normalize(rotated_vector)
             nx.append(x)
@@ -376,7 +363,7 @@ def draw_body(body, vertices, indices, color_rgba):
         # cylinder vertices and normals (position XYZ + normals)
         px,py,pz = body.getPosition()   #cylinderの座標を取得
         arr1 = np.array([], dtype=np.float32)
-        for i in range(rad_num*2+2):                                  
+        for i in range(rad_num*(height_num + 1)+2): # +2は上下の天板の分
             arr2 = np.array([   vpx[i]+px, vpy[i]+py, vpz[i]+pz,        # positions
                                 nx[i], ny[i], nz[i],                    # normals
                                 color_r, color_g, color_b, color_a,     # color
@@ -386,81 +373,72 @@ def draw_body(body, vertices, indices, color_rgba):
         vertices_result = np.append(vertices, arr1)
         
         # Indices defining the triangles composing the cylinder
+        i_start = max(indices) + 1  #天板用のindicesを記録しておく
+        #cylinder側面のindices
+        for hn in range(height_num):    #高さ方向
+            #indicesの続きの値を取得
+            if len(indices) == 0:
+                i = 0
+            else:
+                if hn == 0:
+                    i = max(indices) + 1
+                else:
+                    i = max(indices) + 1 - rad_num  #一段下（一つ前の上側）のindicesを基準にして、上側に新しいindicesを数える。
+            #indicesの計算
+            arr3 = np.array( [], dtype=np.uint32 ) #一周分のindicesのリスト
+            for s in range( rad_num ):  #円周方向
+                if s < rad_num - 1:
+                    #cylinder側面のindices
+                    arr4 = np.array([   s + 0 + i,
+                                        s + 1 + i,
+                                        s + 1 + rad_num + i,
+
+                                        s + 1 + rad_num + i,
+                                        s + rad_num + i,
+                                        s + 0 + i ], dtype=np.uint32)
+                else:
+                    #円周方向のindicesのつなぎ目
+                    arr4 = np.array([ rad_num - 1 + i,
+                                        0 + i,
+                                        rad_num + i,
+
+                                        rad_num + i, 
+                                        rad_num * 2 -1 + i,
+                                        rad_num - 1 + i ], dtype=np.uint32)
+                #indicesをリストに追加      
+                arr3 = np.append(arr3, arr4)
+            #一周分のindicesをリストに追加     
+            indices = np.append(indices, arr3)
+        
+        #indicesの続きの値を取得
         if len(indices) == 0:
             i = 0
         else:
             i = max(indices) + 1
-        #cylinder側面のindices
-        arr3 = np.array( [], dtype=np.uint32 )
-        for s in range( rad_num ):
-            if s < rad_num - 1:
-                #cylinder側面のindices
-                arr4 = np.array([     s + 0 + i,
-                                      s + 1 + i,
-                                      s + 1 + rad_num + i,
-
-                                      s + 1 + rad_num + i,
-                                      s + rad_num + i,
-                                      s + 0 + i ], dtype=np.uint32)
-            else:
-                #cylinder側面のindicesのつなぎ目
-                arr4 = np.array([ rad_num - 1 + i,
-                                      0 + i,
-                                      rad_num + i,
-
-                                      rad_num + i, 
-                                      rad_num * 2 -1 + i,
-                                      rad_num - 1 + i ], dtype=np.uint32)                
-            arr3 = np.append(arr3, arr4)
-
-        #cylinder天板のindices
-        for s in range( rad_num ):
+        #cylinder天板のindices    
+        for s in range( rad_num ):  #円周方向
             if s < rad_num - 1:
                 #cylinder天板のindices
-                arr4 = np.array([ rad_num * 2 + i,
-                                  s + 0 + i,
-                                  s + 1 + i,
+                arr4 = np.array([ i,        #天板の中心のindices
+                                  s + 0 + i - rad_num,  #側面の最後の一周のindeices
+                                  s + 1 + i - rad_num,  #側面の最後の一周のindeices
 
-                                  rad_num * 2 + 1 + i,
-                                  s + rad_num + i,
-                                  s + rad_num + 1 + i ], dtype=np.uint32)
-            else:
-                #cylinder天板のindicesのつなぎ目
-                arr4 = np.array([rad_num * 2 + i,
-                                 rad_num - 1 + i,
-                                 0+i,
-                                   
-                                 rad_num * 2 + 1 + i,
-                                 rad_num * 2 - 1 + i,
-                                 rad_num + i], dtype=np.uint32)
+                                  1 + i,    #天板の中心のindices
+                                  s + 0 + i_start,  #側面の最初の一周のindeices
+                                  s + 1 + i_start   #側面の最初の一周のindeices
+                                  ], dtype=np.uint32)
+            else:   #円周方向のつなぎ目
+                arr4 = np.array([ i,        #天板の中心のindices
+                                  s + 0 + i - rad_num,            #側面の最後の一周のindeices
+                                  s + 1 + i - rad_num - rad_num,  #側面の最後の一周のindeices
+
+                                  1 + i,    #天板の中心のindices
+                                  s + 0 + i_start,              #側面の最初の一周のindeices
+                                  s + 1 + i_start - rad_num     #側面の最初の一周のindeices
+                                  ], dtype=np.uint32)
+            #indicesをリストに追加
             arr3 = np.append(arr3, arr4)
-
-        """
-        arr3 = np.array([
-            #側面
-            0+i,1+i,11+i, 11+i,10+i,0+i,  
-            1+i,2+i,12+i, 12+i,11+i,1+i,  
-            2+i,3+i,13+i, 13+i,12+i,2+i,  
-            3+i,4+i,14+i, 14+i,13+i,3+i,  
-            4+i,5+i,15+i, 15+i,14+i,4+i,  
-            5+i,6+i,16+i, 16+i,15+i,5+i,  
-            6+i,7+i,17+i, 17+i,16+i,6+i,  
-            7+i,8+i,18+i, 18+i,17+i,7+i,  
-            8+i,9+i,19+i, 19+i,18+i,8+i,  
-            9+i,0+i,10+i, 10+i,19+i,9+i,
-            #天板
-            20+i,0+i,1+i,  21+i,10+i,11+i,
-            20+i,1+i,2+i,  21+i,11+i,12+i,
-            20+i,2+i,3+i,  21+i,12+i,13+i,
-            20+i,3+i,4+i,  21+i,13+i,14+i,
-            20+i,4+i,5+i,  21+i,14+i,15+i,
-            20+i,5+i,6+i,  21+i,15+i,16+i,
-            20+i,6+i,7+i,  21+i,16+i,17+i,
-            20+i,7+i,8+i,  21+i,17+i,18+i,
-            20+i,8+i,9+i,  21+i,18+i,19+i,
-            20+i,9+i,0+i,  21+i,19+i,10+i
-        ], dtype=np.uint32)
-        """
+        #一周分のindicesをリストに追加  
         indices_result = np.append(indices, arr3)
 
     return vertices_result, indices_result
@@ -549,7 +527,7 @@ def drop_box( init_object_i, density):
     objcount += 1
 
 # drop_cylinder_object
-def drop_cylinder( rotation_num, init_object_i, density):
+def drop_cylinder( init_object_i, density):
     """Drop an object into the scene."""
     global bodies, geoms, objcount
 
@@ -558,9 +536,9 @@ def drop_cylinder( rotation_num, init_object_i, density):
 
     #odeとopenglのシリンダーの方向を一致させるために、3(z軸方向)にする。
     body, geom = create_cylinder(world, space, density, 3, r, h)  
-    if rotation_num == 1:
+    if init_object_i[0] == "cylinder_z":    #init_object_i= [ name, shape, position, color ]
         theta = 3.1415*(0.0/180.0)  #シリンダーの方向はz軸方向
-    if rotation_num == 2:
+    if init_object_i[0] == "cylinder_y":    #init_object_i= [ name, shape, position, color ]
         theta = 3.1415*(90.0/180.0) #シリンダーの方向をy軸方向にして、シリンダーを立てる。
     body.setPosition( (px, py, pz) )  
     ct = cos (theta)
@@ -687,7 +665,7 @@ if not glfw.init():
     glfw.terminate()
 
 # Create Window
-window = glfw.create_window(680, 450, "PyOpenGL GLFW ", None, None)
+window = glfw.create_window(680, 450, "ResNet18で視界画像を判別して衝突回避。左:俯瞰画像。右:視界画像。", None, None)
 if not window:
     glfw.terminate()
 #
@@ -746,34 +724,30 @@ init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -4.2,  0.5,  0
 init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -3.2,  0.5,  0.00),           ( 0.2, 0.20, 0.2, 1.0)])    #11 : 棚の脚
 init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -3.2,  0.5,  2.00),           ( 0.2, 0.20, 0.2, 1.0)])    #12 : 棚の脚
 init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -4.2,  0.5,  2.00),           ( 0.2, 0.20, 0.2, 1.0)])    #13 : 棚の脚
-init_object.append(["cylinder_y",       ( 0.4, 0.1),            (  0.0,  0.05, 2.0 ),           ( 0.8, 0.8, 0.8, 1.0)])     #14 : 扇風機の足1
-init_object.append(["cylinder_y",       ( 0.1, 0.6),            (  0.0,  0.3,  2.0 ),           ( 0.8, 0.8, 0.8, 1.0)])     #15 : 扇風機の足2
-init_object.append(["cylinder_z",       ( 0.3, 0.1),            (  0.0,  0.7,  1.75),           ( 0.8, 0.8, 0.8, 1.0)])     #16 : 扇風機の頭1
-init_object.append(["cylinder_z",       ( 0.1, 0.4),            (  0.0,  0.7,  2.0 ),           ( 0.8, 0.8, 0.8, 1.0)])     #17 : 扇風機の頭2
+init_object.append(["cylinder_y",       ( 0.4, 0.1),            (  0.0,  0.05, 2.0 ),           ( 1.0, 1.0, 1.0, 1.0)])     #14 : 扇風機の足1
+init_object.append(["cylinder_y",       ( 0.1, 0.6),            (  0.0,  0.3,  2.0 ),           ( 1.0, 1.0, 1.0, 1.0)])     #15 : 扇風機の足2
+init_object.append(["cylinder_z",       ( 0.3, 0.1),            (  0.0,  0.7,  1.75),           ( 1.0, 1.0, 1.0, 1.0)])     #16 : 扇風機の頭1
+init_object.append(["cylinder_z",       ( 0.1, 0.4),            (  0.0,  0.7,  2.0 ),           ( 1.0, 1.0, 1.0, 1.0)])     #17 : 扇風機の頭2
 init_object.append(["box",              ( 2.2,  0.2, 1.20),     (  1.0,  0.3, -3.5 ),           ( 0.5, 0.5, 0.5, 1.0)])     #18 : #ベッドの天板
 init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  0.0,  0.1, -4.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #19 : #ベッドの足
 init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  2.0,  0.1, -4.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #20 : #ベッドの足
 init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  2.0,  0.1, -3.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #21 : #ベッドの足
 init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  0.0,  0.1, -3.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #22 : #ベッドの足
 
-
 #オブジェクトをbodies[]とgeoms[]に入れる
 for iob in init_object: # iob  = [ name, shape, position, color ]
-    # 車輪
-    if iob[0] == "cylinder_z":    # iob[0]はname
-        drop_cylinder(1, iob, 10)  #(rotation_num, init_object[i], density)
-    # 車輪以外
+    # cylinder
+    if iob[0] == "cylinder_z" or iob[0] == "cylinder_y":    # iob[0]はname
+        drop_cylinder(iob, 10)  #(init_object[i], density)
+    # box
     else:
-        if iob[0] == "cylinder_y":  # iob[0]はname
-            drop_cylinder(2, iob, 10)  #(rotation_num, init_object[i], density)
-        else:
-            drop_box(iob, 1.0) #drop_box_robo(init_object[i], density)
+        drop_box(iob, 1.0) #drop_box_robo(init_object[i], density)
 
 #二輪箱ロボットのヒンジジョイントの作成
 hinge2_joints=[]
 #二輪箱ロボットの車輪のヒンジ2ジョイント 1
 hinge2_joints.append(ode.Hinge2Joint(world))
-hinge2_joints[0].attach(bodies[2], bodies[0])
+hinge2_joints[0].attach(bodies[2], bodies[0])     #箱と車輪
 hinge2_joints[0].setAnchor((sx + 0.0, 0.15, sz + 0.0))
 hinge2_joints[0].setAxis1((0, 0, 1))  # Set the first axis (e.g., wheel rotation)
 hinge2_joints[0].setAxis2((0, 1, 0))  # Set the second axis (e.g., suspension/steering)
@@ -782,7 +756,7 @@ hinge2_joints[0].setParam(ode.ParamVel2, 0)  # 速度をゼロに設定
 hinge2_joints[0].setParam(ode.ParamFMax2, 1000)  # 強い力で固定
 #二輪箱ロボットの車輪のヒンジ2ジョイント 2
 hinge2_joints.append(ode.Hinge2Joint(world))
-hinge2_joints[1].attach(bodies[2], bodies[1])
+hinge2_joints[1].attach(bodies[2], bodies[1])     #箱と車輪
 hinge2_joints[1].setAnchor((sx + 0.0, 0.15, sz + 0.0))
 hinge2_joints[1].setAxis1((0, 0, 1))  # Set the first axis (e.g., wheel rotation)
 hinge2_joints[1].setAxis2((0, 1, 0))  # Set the second axis (e.g., suspension/steering)
@@ -798,7 +772,7 @@ fixed_joints[0].attach(bodies[2], bodies[3])  #箱と注視点boxを固定
 fixed_joints[0].setFixed()
 #障害物オブジェクトの固定ジョイントの作成
 for index, b in enumerate(bodies):
-    if index >3: 
+    if index > 3: #箱と車輪二つと注視点用box以外
         fixed_joints.append(ode.FixedJoint(world))
         fixed_joints[len(fixed_joints)-1].attach(b, None)  #障害物オブジェクトをその場に固定
         fixed_joints[len(fixed_joints)-1].setFixed()
@@ -851,7 +825,6 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
                      16+i,17+i,18+i,  19+i,17+i,18+i  #壁手前    
                      ], dtype=np.uint32)
     indices = np.append(indices, arr3)
-
 
     #odeオブジェクトの頂点データを作成
     for index, b in enumerate(bodies):
@@ -918,6 +891,7 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     glfw.poll_events()
 
     glUseProgram(shader_program)
+
     glUniform1i(glGetUniformLocation(shader_program, "texture0"), 0) # GL_TEXTURE0を渡す
     glUniform1i(glGetUniformLocation(shader_program, "texture1"), 1) # GL_TEXTURE1を渡す
 
@@ -942,22 +916,16 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     proj_loc = glGetUniformLocation(shader_program, "projection")
     light_dir_loc = glGetUniformLocation(shader_program, "lightDir")
     light_color_loc = glGetUniformLocation(shader_program, "lightColor")
-    #object_color_loc = glGetUniformLocation(shader_program, "objectColor")
-    #view_pos_loc = glGetUniformLocation(shader_program, "viewPos")
 
     # uniformのセット
     glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
-    #glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
     glUniformMatrix4fv(proj_loc, 1, GL_FALSE, projection)
-    glUniform3f(light_dir_loc, 0.0, -3.0, 1.0)  # ディレクショナルライトの方向例
+    glUniform3f(light_dir_loc, 1.0, -3.0, -1.0)  # ディレクショナルライトの方向例
     glUniform3f(light_color_loc, 1.0, 1.0, 1.0)  # 白色光
-    #glUniform3f(object_color_loc, 1.0, 0.5, 0.31) # オブジェクトの色
-    #glUniform3f(view_pos_loc, 0.0, 0.0, 3.0)     # カメラ位置例
 
     # 1つ目のビューポートの設定（左）
     # View matrix (camera)
     glViewport(10, 10, 320, 320)   
-    view = np.identity(4, dtype=np.float32)
 
     #glm.lookat()でカメラの設定
     cameraPos = glm.vec3(6.0, 7.2, 7.5,)
@@ -966,6 +934,7 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     view_glm = glm.lookAt(cameraPos, targetPos, upVector)   #俯瞰の視点
 
     # numpyの回転行列にglmの回転行列の姿勢データを入れる
+    view = np.identity(4, dtype=np.float32)
     view[0,0] = view_glm[0,0]
     view[1,0] = view_glm[1,0]
     view[2,0] = view_glm[2,0]
@@ -995,7 +964,6 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     # 2つ目のビューポートの設定（右）
     # View matrix (camera)
     glViewport(340, 10, 320, 320)    
-    view = np.identity(4, dtype=np.float32)
 
     robo_x, robo_y, robo_z = bodies[2].getPosition()   #boxの座標を取得
     gaze_x, gaze_y, gaze_z = bodies[3].getPosition()   #boxの座標を取得
@@ -1007,6 +975,7 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     view_glm = glm.lookAt(cameraPos, targetPos, upVector)   #俯瞰の視点
 
     # numpyの回転行列にglm.lookAt()の回転行列のデータを入れる
+    view = np.identity(4, dtype=np.float32)    
     view[0,0] = view_glm[0,0]
     view[1,0] = view_glm[1,0]
     view[2,0] = view_glm[2,0]
@@ -1039,8 +1008,6 @@ def main():
     global counter, state, lasttime
     global bodies, geoms
 
-
-
     #テクスチャ読み込み#
     tex_floor = load_texture("sample1.png")
     tex_wall = load_texture("sample2.png")
@@ -1050,7 +1017,6 @@ def main():
     # テクスチャ1にバインド
     glActiveTexture(GL_TEXTURE1)
     glBindTexture(GL_TEXTURE_2D, tex_wall)
-
 
     #透明表現を有効にする
     glEnable(GL_BLEND)
@@ -1078,11 +1044,11 @@ def main():
         glEnable(GL_SCISSOR_TEST)
         #Define the scissor box (x, y, width, height)
         glScissor(10, 10, 320, 320)
-        glClearColor(0.0, 0.0, 0.0, 1)
+        glClearColor(0.15, 0.62, 0.89, 1)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)     
         #Define the scissor box (x, y, width, height)
         glScissor(340, 10, 320, 320)
-        glClearColor(0.0, 0.0, 0.0, 1)
+        glClearColor(0.15, 0.62, 0.89, 1)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)   
         #Disable the scissor test when done
         glDisable(GL_SCISSOR_TEST)
@@ -1097,7 +1063,7 @@ def main():
             time.sleep(t)
         
         counter += 1
-
+        #直進or回転
         if counter==50:     
             if display_image_recognition() == 0:
                 # Configure joint parameters (optional)
@@ -1116,7 +1082,7 @@ def main():
                 # Configure joint parameters (optional)
                 hinge2_joints[1].setParam(ode.ParamVel, 2.5)  # Set desired velocity
                 hinge2_joints[1].setParam(ode.ParamFMax, 100)  # Set maximum force
-
+        #車輪を止める
         if counter == 100:  
             # Configure joint parameters (optional)
             hinge2_joints[0].setParam(ode.ParamVel, 0)  # Set desired velocity
