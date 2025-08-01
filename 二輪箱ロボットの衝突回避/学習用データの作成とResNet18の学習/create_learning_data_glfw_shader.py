@@ -507,6 +507,25 @@ def drop_object():
     #counter=0
     objcount+=1
 
+# drop_box_robo
+def drop_box_robo( init_object_i, density):
+    """Drop an object into the scene."""
+    global bodies, geoms, objcount
+
+    lx, ly, lz = init_object_i[1]
+    px, py, pz = init_object_i[2]
+
+    body, geom = create_box(world, space, density, lx, ly, lz)
+    theta = 0
+    body.setPosition( (px, py, pz) )
+    ct = cos (theta)
+    st = sin (theta)
+    body.setRotation([ct, 0., -st, 0., 1., 0., st, 0., ct])#y軸回転
+    #body.setRotation([1., 0., 0., 0., ct, -st, 0., st, ct])#x軸回転 
+    bodies_robo.append(body)
+    geoms_robo.append(geom)
+    objcount += 1
+
 # drop_box_object
 def drop_box( init_object_i, density):
     """Drop an object into the scene."""
@@ -657,6 +676,26 @@ def load_texture(texture_file_name):
 
     return texture_id
 
+#4つの方角（北東南西）の処理が終わったときに衝突判定の学習用クラスラベルデータを出力
+def box_collision_class_label_file(class_label, txt_file_name):
+    with open(txt_file_name,"w") as o:
+        for index, v in enumerate(class_label):
+            if index == len(class_label) - 1:
+                print(str(v), end="", file=o)
+            else:
+                print(str(v) + ",", end="", file=o)
+
+#無効座標ファイル作成用
+def invalid_position_matrix_file(invalid_position_matrix, txt_file_name):
+    with open(txt_file_name,"w") as o:
+        # ループで全要素を取得
+        for row in invalid_position_matrix:
+            for index, element in enumerate(row):
+                if index == len(row) - 1:
+                    print(str(element), file=o)  
+                else:                                  
+                    print(str(element) + ",", end=" ", file=o)
+
 
 ######################################################################
 # Initialize GLFW
@@ -665,7 +704,7 @@ if not glfw.init():
     glfw.terminate()
 
 # Create Window
-window = glfw.create_window(680, 450, "ResNet18で視界画像を判別して衝突回避。左:俯瞰画像。右:視界画像。", None, None)
+window = glfw.create_window(680, 450, "学習用データの作成。左:俯瞰画像。右:視界画像。", None, None)
 if not window:
     glfw.terminate()
 #
@@ -686,9 +725,11 @@ floor = ode.GeomPlane(space, (0,1,0), 0)
 
 # A list with ODE bodies
 bodies = []
+bodies_robo = []
 
 # The geoms for each of the bodies
 geoms = []
+geoms_robo = []
 
 # A joint group for the contact joints that are generated whenever
 # two bodies collide
@@ -703,36 +744,40 @@ counter = 0
 objcount = 0
 lasttime = time.time()
 
-# 箱ロボットの初期位置
-sx = 2.0
-sz = 1.5
+#roboオブジェクト描画の初期設定
+init_object_robo = []
+                         #name          #shape                  #position                       #color
+init_object_robo.append(["box_robo",    ( 0.4, 0.4, 0.4),     (  0.0, 0.2,  0.0 ),           ( 0.5, 0.9, 0.1, 1.0)])     #0 : 箱ロボット
 
-#odeオブジェクト描画の初期設定
+#オブジェクト描画の初期設定
 init_object = []
                     #name               #shape                  #position                       #color
-init_object.append(["cylinder_z",       ( 0.15, 0.1),           ( sx + 0.0, 0.15, sz + 0.17 ),  ( 0.3, 0.3, 1.0, 1.0)])     #0 : 二輪箱ロボットの車輪
-init_object.append(["cylinder_z",       ( 0.15, 0.1),           ( sx + 0.0, 0.15, sz - 0.17 ),  ( 0.3, 0.3, 1.0, 1.0)])     #1 : 二輪箱ロボットの車輪
-init_object.append(["box_robo",         ( 0.30, 0.28, 0.2),     ( sx + 0.0, 0.15, sz + 0.0 ),   ( 0.5, 0.9, 0.1, 1.0)])     #2 : 二輪箱ロボットの箱
-init_object.append(["box_gaze_point",   ( 0.05, 0.05, 0.05),    ( sx - 0.3, 0.15, sz + 0.0 ),   ( 0.5, 0.9, 0.1, 1.0)])     #3 : 注視点用box。描画しない。
-init_object.append(["box",              ( 1.30, 0.2, 1.70),     (  3.8,  0.7,  0.82),           ( 0.4, 0.23, 0.2, 1.0)])    #4 : 机の天板
-init_object.append(["box",              ( 0.15, 0.6, 0.15),     (  3.3,  0.3,  0.00),           ( 0.4, 0.23, 0.2, 1.0)])    #5 : 机の脚
-init_object.append(["box",              ( 0.15, 0.6, 0.15),     (  4.3,  0.3,  0.00),           ( 0.4, 0.23, 0.2, 1.0)])    #6 : 机の脚
-init_object.append(["box",              ( 1.00, 0.6, 0.50),     (  3.8,  0.3,  1.40),           ( 0.4, 0.23, 0.2, 1.0)])    #7 : 机の引き出し
-init_object.append(["box",              ( 1.00, 0.1, 2.00),     ( -3.7,  0.6,  1.00),           ( 0.2, 0.20, 0.2, 1.0)])    #8 : 棚の天板1
-init_object.append(["box",              ( 1.00, 0.1, 2.00),     ( -3.7,  1.0,  1.00),           ( 0.2, 0.20, 0.2, 1.0)])    #9 : 棚の天板2
-init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -4.2,  0.5,  0.00),           ( 0.2, 0.20, 0.2, 1.0)])    #10 : 棚の脚
-init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -3.2,  0.5,  0.00),           ( 0.2, 0.20, 0.2, 1.0)])    #11 : 棚の脚
-init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -3.2,  0.5,  2.00),           ( 0.2, 0.20, 0.2, 1.0)])    #12 : 棚の脚
-init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -4.2,  0.5,  2.00),           ( 0.2, 0.20, 0.2, 1.0)])    #13 : 棚の脚
+init_object.append(["box",              ( 1.30, 0.2, 1.70),     (  3.8,  0.7,  0.82),           ( 0.4, 0.23, 0.2, 1.0)])    #0 : 机の天板
+init_object.append(["box",              ( 0.15, 0.6, 0.15),     (  3.3,  0.3,  0.00),           ( 0.4, 0.23, 0.2, 1.0)])    #1 : 机の脚
+init_object.append(["box",              ( 0.15, 0.6, 0.15),     (  4.3,  0.3,  0.00),           ( 0.4, 0.23, 0.2, 1.0)])    #2 : 机の脚
+init_object.append(["box",              ( 1.00, 0.6, 0.50),     (  3.8,  0.3,  1.40),           ( 0.4, 0.23, 0.2, 1.0)])    #3 : 机の引き出し
+init_object.append(["box",              ( 1.00, 0.1, 2.00),     ( -3.7,  0.6,  1.00),           ( 0.2, 0.20, 0.2, 1.0)])    #4 : 棚の天板1
+init_object.append(["box",              ( 1.00, 0.1, 2.00),     ( -3.7,  1.0,  1.00),           ( 0.2, 0.20, 0.2, 1.0)])    #5 : 棚の天板2
+init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -4.2,  0.5,  0.00),           ( 0.2, 0.20, 0.2, 1.0)])    #6 : 棚の脚
+init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -3.2,  0.5,  0.00),           ( 0.2, 0.20, 0.2, 1.0)])    #7 : 棚の脚
+init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -3.2,  0.5,  2.00),           ( 0.2, 0.20, 0.2, 1.0)])    #8 : 棚の脚
+init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -4.2,  0.5,  2.00),           ( 0.2, 0.20, 0.2, 1.0)])    #9 : 棚の脚
 init_object.append(["cylinder_y",       ( 0.4, 0.1),            (  0.0,  0.05, 2.0 ),           ( 1.0, 1.0, 1.0, 1.0)])     #10 : 扇風機の足1
 init_object.append(["cylinder_y",       ( 0.1, 0.6),            (  0.0,  0.3,  2.0 ),           ( 1.0, 1.0, 1.0, 1.0)])     #11 : 扇風機の足2
 init_object.append(["cylinder_z",       ( 0.3, 0.1),            (  0.0,  0.7,  1.75),           ( 1.0, 1.0, 1.0, 1.0)])     #12 : 扇風機の頭1
 init_object.append(["cylinder_z",       ( 0.1, 0.4),            (  0.0,  0.7,  2.0 ),           ( 1.0, 1.0, 1.0, 1.0)])     #13 : 扇風機の頭2
-init_object.append(["box",              ( 2.2,  0.2, 1.20),     (  1.0,  0.3, -3.5 ),           ( 0.5, 0.5, 0.5, 1.0)])     #18 : #ベッドの天板
-init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  0.0,  0.1, -4.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #19 : #ベッドの足
-init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  2.0,  0.1, -4.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #20 : #ベッドの足
-init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  2.0,  0.1, -3.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #21 : #ベッドの足
-init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  0.0,  0.1, -3.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #22 : #ベッドの足
+init_object.append(["box",              ( 2.2,  0.2, 1.20),     (  1.0,  0.3, -3.5 ),           ( 0.5, 0.5, 0.5, 1.0)])     #14 : #ベッドの天板
+init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  0.0,  0.1, -4.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #15 : #ベッドの足
+init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  2.0,  0.1, -4.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #16 : #ベッドの足
+init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  2.0,  0.1, -3.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #17 : #ベッドの足
+init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  0.0,  0.1, -3.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #18 : #ベッドの足
+init_object.append(["box",              ( 0.3, 1.0, 8.99),     ( -4.651, 0.50,  0.0),           ( 0.4, 0.23, 0.2, 1.0)])    #19 : 外周左
+init_object.append(["box",              ( 0.3, 1.0, 8.99),     (  4.651, 0.50,  0.0),           ( 0.4, 0.23, 0.2, 1.0)])    #20 : 外周右
+init_object.append(["box",              ( 8.99, 1.0, 0.3),     (  0.0, 0.50,  4.651),           ( 0.4, 0.23, 0.2, 1.0)])    #21 : 外周手前
+init_object.append(["box",              ( 8.99, 1.0, 0.3),     (  0.0, 0.50, -4.651),           ( 0.4, 0.23, 0.2, 1.0)])    #22 : 外周奥
+
+#roboオブジェクトをbodies_robo[]とgeoms_robo[]に入れる
+drop_box_robo(init_object_robo[0], 1.0)
 
 #オブジェクトをbodies[]とgeoms[]に入れる
 for iob in init_object: # iob  = [ name, shape, position, color ]
@@ -743,43 +788,17 @@ for iob in init_object: # iob  = [ name, shape, position, color ]
     else:
         drop_box(iob, 1.0) #drop_box_robo(init_object[i], density)
 
-#二輪箱ロボットのヒンジジョイントの作成
-hinge2_joints=[]
-#二輪箱ロボットの車輪のヒンジ2ジョイント 1
-hinge2_joints.append(ode.Hinge2Joint(world))
-hinge2_joints[0].attach(bodies[2], bodies[0])     #箱と車輪
-hinge2_joints[0].setAnchor((sx + 0.0, 0.15, sz + 0.0))
-hinge2_joints[0].setAxis1((0, 0, 1))  # Set the first axis (e.g., wheel rotation)
-hinge2_joints[0].setAxis2((0, 1, 0))  # Set the second axis (e.g., suspension/steering)
-# 第2軸の回転を固定
-hinge2_joints[0].setParam(ode.ParamVel2, 0)  # 速度をゼロに設定
-hinge2_joints[0].setParam(ode.ParamFMax2, 1000)  # 強い力で固定
-#二輪箱ロボットの車輪のヒンジ2ジョイント 2
-hinge2_joints.append(ode.Hinge2Joint(world))
-hinge2_joints[1].attach(bodies[2], bodies[1])     #箱と車輪
-hinge2_joints[1].setAnchor((sx + 0.0, 0.15, sz + 0.0))
-hinge2_joints[1].setAxis1((0, 0, 1))  # Set the first axis (e.g., wheel rotation)
-hinge2_joints[1].setAxis2((0, 1, 0))  # Set the second axis (e.g., suspension/steering)
-# 第2軸の回転を固定
-hinge2_joints[1].setParam(ode.ParamVel2, 0)  # 速度をゼロに設定
-hinge2_joints[1].setParam(ode.ParamFMax2, 1000)  # 強い力で固定
-
 #固定ジョイントの作成
 fixed_joints=[]
-#箱ロボットと注視点boxの固定ジョイントの作成
-fixed_joints.append(ode.FixedJoint(world))
-fixed_joints[0].attach(bodies[2], bodies[3])  #箱と注視点boxを固定
-fixed_joints[0].setFixed()
 #障害物オブジェクトの固定ジョイントの作成
 for index, b in enumerate(bodies):
-    if index > 3: #箱と車輪二つと注視点用box以外
-        fixed_joints.append(ode.FixedJoint(world))
-        fixed_joints[len(fixed_joints)-1].attach(b, None)  #障害物オブジェクトをその場に固定
-        fixed_joints[len(fixed_joints)-1].setFixed()
+    fixed_joints.append(ode.FixedJoint(world))
+    fixed_joints[len(fixed_joints)-1].attach(b, None)  #障害物オブジェクトをその場に固定
+    fixed_joints[len(fixed_joints)-1].setFixed()
 
 
 #シェーダーで描画
-def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
+def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO, gaze_x, gaze_z):
 
     vertices = np.array([], dtype=np.float32)
     indices = np.array([], dtype=np.uint32)
@@ -826,13 +845,13 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
                      ], dtype=np.uint32)
     indices = np.append(indices, arr3)
 
+    #roboオブジェクトの頂点データを作成
+    vertices, indices = draw_body(bodies_robo[0], vertices, indices, init_object_robo[0][3])  # init_object[index][3]は、colorのデータ
+
     #odeオブジェクトの頂点データを作成
     for index, b in enumerate(bodies):
-        if index == 3:#注視点用boxを描画しない
-            pass
-        else:
-            #bodyの頂点データを作成
-            vertices, indices = draw_body(b, vertices, indices, init_object[index][3])  # init_object[index][3]は、colorのデータ
+        #bodyの頂点データを作成
+        vertices, indices = draw_body(b, vertices, indices, init_object[index][3])  # init_object[index][3]は、colorのデータ
 
     glBindVertexArray(VAO)
 
@@ -965,12 +984,12 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     # View matrix (camera)
     glViewport(340, 100, 320, 320)    
 
-    robo_x, robo_y, robo_z = bodies[2].getPosition()   #boxの座標を取得
-    gaze_x, gaze_y, gaze_z = bodies[3].getPosition()   #boxの座標を取得
+    robo_x, robo_y, robo_z = bodies_robo[0].getPosition()   #boxの座標を取得
+    #gaze_x, gaze_y, gaze_z = [robo_x, 0.148, robo_z + 0.3]
 
     #glm.lookat()でカメラの設定
-    cameraPos = glm.vec3( robo_x, robo_y, robo_z)
-    targetPos = glm.vec3( gaze_x, 0.148, gaze_z)
+    cameraPos = glm.vec3( robo_x, 0.15, robo_z)
+    targetPos = glm.vec3( robo_x + gaze_x, 0.148, robo_z + gaze_z)
     upVector = glm.vec3(0.0, 1.0, 0.0)    
     view_glm = glm.lookAt(cameraPos, targetPos, upVector)   #俯瞰の視点
 
@@ -1007,6 +1026,65 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
 def main():
     global counter, state, lasttime
     global bodies, geoms
+
+
+    #counterイベント時間の設定
+    timing_update_position_and_clear_box = 100
+    timing_create_box = 102
+    timing_judge1 = 107         #無効座標の判定。#timing_create_boxとtiming_judge1の間は、3カウント以上開ける。
+    timing_img_capture = 109    #箱ロボットの視界をキャプチャ。
+    timing_rolling_box = 111
+    timing_judge2 = 131         #分類ラベルを判定。
+
+    #箱ロボットと障害物の衝突判定用フラグ
+    global_robo_obstacle_collision_flag = 0 
+
+    #箱を転がす方角のカウント。
+    rolling_direc_count = 0   #無効座標の取得=0、北=1、東=2、南=3、西=4
+    rolling_direc_count_max = 4
+
+    #箱ロボットの座標設定
+    box_px_start = -4.0
+    box_pz_start = -4.0
+    box_px_end = 4.0
+    box_pz_end = 4.0
+    box_px = box_px_start  #箱のx座標の初期値をセット
+    box_pz = box_pz_start  #箱のy座標の初期値をセット
+    box_dpx = 0.25  #箱のx座標の探索の刻み幅
+    box_dpz = 0.25  #箱のy座標の探索の刻み幅
+
+    #箱ロボットの座標マトリックス設定
+    ipmx = 0#無効座標ファイル作成用
+    ipmz = 0#無効座標ファイル作成用
+    ipms = int((abs(box_px_start)*2) / box_dpx) + 1 #無効座標マトリックスのサイズ
+
+    #北=1
+    gaze_x = 0 #視線方向の初期値をセット
+    gaze_z = -0.3 #視線方向の初期値をセット
+    Force_x = 0 #箱を押す力の方向の初期値をセット
+    Force_z = -120  #箱を押す力の方向の初期値をセット
+
+
+    #学習用のクラスラベル
+    class_label = []  
+
+    #最初から始めるとき
+    if rolling_direc_count == 0:
+        # ゼロ埋め2D配列を作成
+        invalid_position_matrix = [[0 for _ in range(ipms)] for _ in range(ipms)]#無効座標ファイル作成用
+    #途中から始めるとき
+    if rolling_direc_count != 0:
+        # Read lines from a file
+        with open('invalid_position_matrix.txt', 'r') as file:
+            lines = file.readlines()
+        # Convert lines to a 2D NumPy array (assuming space-separated values)
+        invalid_position_matrix = np.array([list(map(int, line.strip().split(","))) for line in lines])
+
+    # 配列の省略表示を無効化
+    #np.set_printoptions(threshold=np.inf)
+    #print(invalid_position_matrix)
+
+
 
     #テクスチャ読み込み#
     tex_floor = load_texture("sample1.png")
@@ -1054,57 +1132,151 @@ def main():
         glDisable(GL_SCISSOR_TEST)
 
         #シェーダーで描画
-        use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO)
+        use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO, gaze_x, gaze_z)
 
 
         #物理演算部分
-        t = dt - (time.time() - lasttime)
-        if (t > 0):
-            time.sleep(t)
+        #t = dt - (time.time() - lasttime)
+        #if (t > 0):
+        #    time.sleep(t)
         
-        counter += 1
-        #直進or回転
-        if counter==50:     
-            if display_image_recognition() == 0:
-                # Configure joint parameters (optional)
-                hinge2_joints[0].setParam(ode.ParamVel, -2.5)  # Set desired velocity
-                hinge2_joints[0].setParam(ode.ParamFMax, 100)  # Set maximum force
+        if rolling_direc_count <= rolling_direc_count_max:#探索する方角の回数が4以下のとき。北東南西の４回。
+            counter += 1
 
-                # Configure joint parameters (optional)
-                hinge2_joints[1].setParam(ode.ParamVel, -2.5)  # Set desired velocity
-                hinge2_joints[1].setParam(ode.ParamFMax, 100)  # Set maximum force
+            #座標の更新
+            if counter == timing_update_position_and_clear_box:
+                box_px += box_dpx  #箱のx座標を更新
+                ipmx += 1#無効座標ファイル作成用☆☆☆#
+                #箱のx方向座標がmaxを超えたとき
+                if box_px > box_px_end:
+                    box_pz += box_dpz       #箱のz方向座標を更新
+                    ipmz += 1#無効座標ファイル作成用☆☆☆#
 
-            if display_image_recognition() == 1:
-                # Configure joint parameters (optional)
-                hinge2_joints[0].setParam(ode.ParamVel, -2.5)  # Set desired velocity
-                hinge2_joints[0].setParam(ode.ParamFMax, 100)  # Set maximum force
+                    #4つの方角（北東南西）の処理が終わったときに衝突判定の学習用クラスラベルデータを出力
+                    if box_px > box_px_end and box_pz > box_pz_end and rolling_direc_count == rolling_direc_count_max:
+                        if rolling_direc_count != 0:
+                            box_collision_class_label_file( class_label, "label_data_for_learning_ResNet18.txt")
+                            counter =  timing_update_position_and_clear_box - 1
 
-                # Configure joint parameters (optional)
-                hinge2_joints[1].setParam(ode.ParamVel, 2.5)  # Set desired velocity
-                hinge2_joints[1].setParam(ode.ParamFMax, 100)  # Set maximum force
-        #車輪を止める
-        if counter == 100:  
-            # Configure joint parameters (optional)
-            hinge2_joints[0].setParam(ode.ParamVel, 0)  # Set desired velocity
-            hinge2_joints[0].setParam(ode.ParamFMax, 100)  # Set maximum force
+                    #一つの方角の探索が終わったとき
+                    if box_px > box_px_end and box_pz > box_pz_end:
 
-            # Configure joint parameters (optional)
-            hinge2_joints[1].setParam(ode.ParamVel, 0)  # Set desired velocity
-            hinge2_joints[1].setParam(ode.ParamFMax, 100)  # Set maximum force
-            #カウンターを最初に戻す
-            counter = 0
+                        if rolling_direc_count == 0:
+                            #無効座標ファイル作成用☆☆☆#
+                            invalid_position_matrix_file( invalid_position_matrix, "invalid_position_matrix.txt")
 
+                        rolling_direc_count += 1 #rolling_direc_countを次の方角に更新
+                        #次の方角の探索の始まりの座標
+                        box_px = box_px_start
+                        box_pz = box_pz_start
+                        ipmx = 0#無効座標ファイル作成用☆☆☆#
+                        ipmz = 0#無効座標ファイル作成用☆☆☆#
+                        #e
+                        if rolling_direc_count == 2:
+                            gaze_x = 0.3
+                            gaze_z = 0 
+                            Force_x = 120 
+                            Force_z = 0 
+                        #s
+                        if rolling_direc_count == 3:
+                            gaze_x = 0                
+                            gaze_z = 0.3
+                            Force_x = 0
+                            Force_z = 120
+                        #w
+                        if rolling_direc_count == 4:
+                            gaze_x = -0.3
+                            gaze_z = 0
+                            Force_x = -120 
+                            Force_z = 0
+
+                        counter = timing_update_position_and_clear_box - 1
+
+                    box_px = box_px_start     #箱のx方向座標を折り返し
+                    ipmx = 0    #無効座標ファイル作成用
+
+            #箱ロボットを作成     
+            if counter == timing_create_box:
+                #箱ロボットをクリア
+                bodies_robo.clear()
+                geoms_robo.clear()
+                #無効座標を取得するとき
+                if rolling_direc_count == 0:
+                    #無効座標ファイル作成用に一回り大きい箱ロボットを作成する
+                    #roboオブジェクトをbodies_robo[]とgeoms_robo[]に入れる
+                                        #name        #shape            #position                 #color
+                    init_object_robo[0]=["box_robo", ( 0.4, 0.4, 0.4), ( box_px, 0.2, box_pz ), ( 0.5, 0.9, 0.1, 1.0)]   #0 : 箱ロボット
+                    drop_box_robo(init_object_robo[0], 1000.0)      #bodies_robo[0], geoms_robo[0]の作成
+                #衝突判定をするとき
+                else:
+                    #箱ロボットを作成する。
+                                        #name        #shape            #position                 #color
+                    init_object_robo[0]=["box_robo", ( 0.3, 0.3, 0.3), ( box_px, 0.2, box_pz ), ( 0.5, 0.9, 0.1, 1.0)]   #0 : 箱ロボット
+                    drop_box_robo(init_object_robo[0], 10.0)      #bodies_robo[0], geoms_robo[0]の作成
+   
+            #箱ロボットがセットされたとき、障害物と重なっているかどうかを判定。
+            if counter == timing_judge1:
+                #無効座標を取得するrolling_direc_countのとき、無効座標を取得する。
+                if rolling_direc_count == 0:
+                    #箱ロボットと障害物が重なったとき
+                    if global_robo_obstacle_collision_flag == 1:
+                        print("無効座標取得:"+str(ipmx)) 
+                        invalid_position_matrix[ipmx][ipmz]= 3 #無効座標マトリックスの値を3にする
+                        global_robo_obstacle_collision_flag = 0 #箱ロボットと障害物の衝突flagを0にして、衝突してない状態に戻す。  
+                    #counterをカウンターを最初に戻す。無効座標取得時は、画像のキャプチャとラベルの取得は行わない。  
+                    counter =  timing_update_position_and_clear_box - 1  #
+
+                #衝突判定をするrolling_direc_countのとき、箱ロボットが作成された座標が無効座標なら、衝突判定をスキップする。
+                if rolling_direc_count != 0:
+                    #無効座標のとき、スキップする
+                    if invalid_position_matrix[ipmx][ipmz] == 3:
+                        print(3)
+                        global_robo_obstacle_collision_flag = 0 #箱ロボットと障害物の衝突flagを0にして、衝突してない状態に戻す。 
+                        counter = timing_update_position_and_clear_box - 1   #カウンターを最初に戻す。無効座標をスキップするときは、画像のキャプチャとラベルの取得は行わない。
+
+            #学習用の画像のキャプチャ
+            if counter == timing_img_capture:
+                capture2().save( "img/test" + str(len(class_label)) + ".jpg")  # 縮小した画像を保存
+
+            #箱を転がす1
+            if counter == timing_rolling_box:
+                bodies_robo[0].addForce(( Force_x, 0, Force_z))
+
+            #箱を転がす2
+            if counter == timing_rolling_box + 2:
+                bodies_robo[0].addForce(( Force_x, 0, Force_z))        
+
+            #衝突するか衝突しないかの学習用クラスラベルデータの取得
+            if counter == timing_judge2: 
+                #箱ロボットと障害物が衝突したとき、1のクラスラベルを取得
+                if global_robo_obstacle_collision_flag == 1:
+                    print(1)
+                    class_label.append(1)
+                    global_robo_obstacle_collision_flag = 0 #箱ロボットと障害物の衝突flagを0にして、衝突してない状態に戻す。
+                #箱ロボットと障害物が衝突しなかったとき、0のクラスラベルを取得
+                else:
+                    print(0)
+                    class_label.append(0)
+                counter =  timing_update_position_and_clear_box - 1   #カウンターを最初に戻す
+
+            #箱の作成が終わった後から、箱ロボットと障害物の衝突判定を開始する。判定するだけで、衝突処理は行わない。
+            if timing_create_box + 1 < counter and counter < timing_judge2:
+                #箱ロボットと障害物の衝突を検出し、フラグを立てる。
+                for g1 in geoms:
+                    for g2 in geoms_robo:
+                        # Check if the objects do collide
+                        contacts = ode.collide(g1, g2)
+                        for c in contacts:
+                            global_robo_obstacle_collision_flag = 1
+                            
         ##衝突検出部分を書き換え。#############
         # Simulate
         n = 4
         for i in range(n):
-
-            for g1 in geoms:
-                for i in range(0,3):
-                    near_callback((world,contactgroup), g1, geoms[i]) # geoms[2]はbox_robo
-
             for g1 in geoms:
                 near_callback((world,contactgroup), g1, floor)
+
+            near_callback((world,contactgroup), geoms_robo[0], floor)
 
                 #space.collide((world,contactgroup), ode.collide_callback(g1, floor))
                 # Simulation step
