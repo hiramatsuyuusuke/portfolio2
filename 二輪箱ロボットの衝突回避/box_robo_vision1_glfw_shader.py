@@ -507,46 +507,41 @@ def drop_object():
     #counter=0
     objcount+=1
 
-# drop_box_object
-def drop_box( init_object_i, density):
+# drop_object2
+def drop_object2( init_object_i, bs, gs, density):
     """Drop an object into the scene."""
-    global bodies, geoms, objcount
 
-    lx, ly, lz = init_object_i[1]
-    px, py, pz = init_object_i[2]
+    if init_object_i[0] == "box":
+        lx, ly, lz = init_object_i[1]
+        px, py, pz = init_object_i[2]
 
-    body, geom = create_box(world, space, density, lx, ly, lz)
-    theta = 0
-    body.setPosition( (px, py, pz) )
-    ct = cos (theta)
-    st = sin (theta)
-    body.setRotation([ct, 0., -st, 0., 1., 0., st, 0., ct])#y軸回転
-    #body.setRotation([1., 0., 0., 0., ct, -st, 0., st, ct])#x軸回転 
-    bodies.append(body)
-    geoms.append(geom)
-    objcount += 1
+        body, geom = create_box(world, space, density, lx, ly, lz)
+        theta = 0
+        body.setPosition( (px, py, pz) )
+        ct = cos (theta)
+        st = sin (theta)
+        body.setRotation([ct, 0., -st, 0., 1., 0., st, 0., ct])#y軸回転
+        #body.setRotation([1., 0., 0., 0., ct, -st, 0., st, ct])#x軸回転 
+        bs.append(body)
+        gs.append(geom)
 
-# drop_cylinder_object
-def drop_cylinder( init_object_i, density):
-    """Drop an object into the scene."""
-    global bodies, geoms, objcount
+    if init_object_i[0] == "cylinder_y" or init_object_i[0] == "cylinder_z":
 
-    r,h = init_object_i[1]
-    px, py, pz = init_object_i[2]
+        r,h = init_object_i[1]
+        px, py, pz = init_object_i[2]
 
-    #odeとopenglのシリンダーの方向を一致させるために、3(z軸方向)にする。
-    body, geom = create_cylinder(world, space, density, 3, r, h)  
-    if init_object_i[0] == "cylinder_z":    #init_object_i= [ name, shape, position, color ]
-        theta = 3.1415*(0.0/180.0)  #シリンダーの方向はz軸方向
-    if init_object_i[0] == "cylinder_y":    #init_object_i= [ name, shape, position, color ]
-        theta = 3.1415*(90.0/180.0) #シリンダーの方向をy軸方向にして、シリンダーを立てる。
-    body.setPosition( (px, py, pz) )  
-    ct = cos (theta)
-    st = sin (theta)
-    body.setRotation([1., 0., 0., 0., ct, st, 0., -st, ct])#x軸回転
-    bodies.append(body)
-    geoms.append(geom)
-    objcount += 1
+        #odeとopenglのシリンダーの方向を一致させるために、3(z軸方向)にする。
+        body, geom = create_cylinder(world, space, density, 3, r, h)  
+        if init_object_i[0] == "cylinder_z":    #init_object_i= [ name, shape, position, color ]
+            theta = 3.1415*(0.0/180.0)  #シリンダーの方向はz軸方向
+        if init_object_i[0] == "cylinder_y":    #init_object_i= [ name, shape, position, color ]
+            theta = 3.1415*(90.0/180.0) #シリンダーの方向をy軸方向にして、シリンダーを立てる。
+        body.setPosition( (px, py, pz) )  
+        ct = cos (theta)
+        st = sin (theta)
+        body.setRotation([1., 0., 0., 0., ct, st, 0., -st, ct])#x軸回転
+        bs.append(body)
+        gs.append(geom)
 
 # explosion
 def explosion():
@@ -686,9 +681,11 @@ floor = ode.GeomPlane(space, (0,1,0), 0)
 
 # A list with ODE bodies
 bodies = []
+bodies_robo = []
 
 # The geoms for each of the bodies
 geoms = []
+geoms_robo = []
 
 # A joint group for the contact joints that are generated whenever
 # two bodies collide
@@ -705,15 +702,19 @@ lasttime = time.time()
 
 # 箱ロボットの初期位置
 sx = 2.0
-sz = 1.5
+sz = 2.0
 
-#odeオブジェクト描画の初期設定
+#odeオブジェクトbodies_robo[]の描画の初期設定
+init_object_robo = []
+                         #name               #shape                  #position                       #color
+init_object_robo.append(["cylinder_z",       ( 0.15, 0.1),           ( sx + 0.0, 0.15, sz + 0.17 ),  ( 0.3, 0.3, 1.0, 1.0)])     #0 : 二輪箱ロボットの車輪
+init_object_robo.append(["cylinder_z",       ( 0.15, 0.1),           ( sx + 0.0, 0.15, sz - 0.17 ),  ( 0.3, 0.3, 1.0, 1.0)])     #1 : 二輪箱ロボットの車輪
+init_object_robo.append(["box",              ( 0.30, 0.28, 0.2),     ( sx + 0.0, 0.15, sz + 0.0 ),   ( 0.5, 0.9, 0.1, 1.0)])     #2 : 二輪箱ロボットの箱
+init_object_robo.append(["box",              ( 0.05, 0.05, 0.05),    ( sx - 0.3, 0.15, sz + 0.0 ),   ( 0.5, 0.9, 0.1, 1.0)])     #3 : 注視点用box。描画しない。
+
+#odeオブジェクトbodies[]の描画の初期設定
 init_object = []
                     #name               #shape                  #position                       #color
-init_object.append(["cylinder_z",       ( 0.15, 0.1),           ( sx + 0.0, 0.15, sz + 0.17 ),  ( 0.3, 0.3, 1.0, 1.0)])     #0 : 二輪箱ロボットの車輪
-init_object.append(["cylinder_z",       ( 0.15, 0.1),           ( sx + 0.0, 0.15, sz - 0.17 ),  ( 0.3, 0.3, 1.0, 1.0)])     #1 : 二輪箱ロボットの車輪
-init_object.append(["box_robo",         ( 0.30, 0.28, 0.2),     ( sx + 0.0, 0.15, sz + 0.0 ),   ( 0.5, 0.9, 0.1, 1.0)])     #2 : 二輪箱ロボットの箱
-init_object.append(["box_gaze_point",   ( 0.05, 0.05, 0.05),    ( sx - 0.3, 0.15, sz + 0.0 ),   ( 0.5, 0.9, 0.1, 1.0)])     #3 : 注視点用box。描画しない。
 init_object.append(["box",              ( 1.30, 0.2, 1.70),     (  3.8,  0.7,  0.82),           ( 0.4, 0.23, 0.2, 1.0)])    #4 : 机の天板
 init_object.append(["box",              ( 0.15, 0.6, 0.15),     (  3.3,  0.3,  0.00),           ( 0.4, 0.23, 0.2, 1.0)])    #5 : 机の脚
 init_object.append(["box",              ( 0.15, 0.6, 0.15),     (  4.3,  0.3,  0.00),           ( 0.4, 0.23, 0.2, 1.0)])    #6 : 机の脚
@@ -734,20 +735,19 @@ init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  2.0,  0.1, -4
 init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  2.0,  0.1, -3.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #21 : #ベッドの足
 init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  0.0,  0.1, -3.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #22 : #ベッドの足
 
-#オブジェクトをbodies[]とgeoms[]に入れる
+#ロボットの描画の初期設定をbodies_robo[]とgeoms_robo[]に入れる
+for iob in init_object_robo: # iob  = [ name, shape, position, color ]
+    drop_object2(iob, bodies_robo, geoms_robo, 7.0)
+
+#家具の描画の初期設定をbodies[]とgeoms[]に入れる
 for iob in init_object: # iob  = [ name, shape, position, color ]
-    # cylinder
-    if iob[0] == "cylinder_z" or iob[0] == "cylinder_y":    # iob[0]はname
-        drop_cylinder(iob, 10)  #(init_object[i], density)
-    # box
-    else:
-        drop_box(iob, 1.0) #drop_box_robo(init_object[i], density)
+    drop_object2(iob, bodies, geoms, 10.0)
 
 #二輪箱ロボットのヒンジジョイントの作成
 hinge2_joints=[]
 #二輪箱ロボットの車輪のヒンジ2ジョイント 1
 hinge2_joints.append(ode.Hinge2Joint(world))
-hinge2_joints[0].attach(bodies[2], bodies[0])     #箱と車輪
+hinge2_joints[0].attach(bodies_robo[2], bodies_robo[0])     #箱と車輪
 hinge2_joints[0].setAnchor((sx + 0.0, 0.15, sz + 0.0))
 hinge2_joints[0].setAxis1((0, 0, 1))  # Set the first axis (e.g., wheel rotation)
 hinge2_joints[0].setAxis2((0, 1, 0))  # Set the second axis (e.g., suspension/steering)
@@ -756,7 +756,7 @@ hinge2_joints[0].setParam(ode.ParamVel2, 0)  # 速度をゼロに設定
 hinge2_joints[0].setParam(ode.ParamFMax2, 1000)  # 強い力で固定
 #二輪箱ロボットの車輪のヒンジ2ジョイント 2
 hinge2_joints.append(ode.Hinge2Joint(world))
-hinge2_joints[1].attach(bodies[2], bodies[1])     #箱と車輪
+hinge2_joints[1].attach(bodies_robo[2], bodies_robo[1])     #箱と車輪
 hinge2_joints[1].setAnchor((sx + 0.0, 0.15, sz + 0.0))
 hinge2_joints[1].setAxis1((0, 0, 1))  # Set the first axis (e.g., wheel rotation)
 hinge2_joints[1].setAxis2((0, 1, 0))  # Set the second axis (e.g., suspension/steering)
@@ -768,11 +768,10 @@ hinge2_joints[1].setParam(ode.ParamFMax2, 1000)  # 強い力で固定
 fixed_joints=[]
 #箱ロボットと注視点boxの固定ジョイントの作成
 fixed_joints.append(ode.FixedJoint(world))
-fixed_joints[0].attach(bodies[2], bodies[3])  #箱と注視点boxを固定
+fixed_joints[0].attach(bodies_robo[2], bodies_robo[3])  #箱と注視点boxを固定
 fixed_joints[0].setFixed()
 #障害物オブジェクトの固定ジョイントの作成
 for index, b in enumerate(bodies):
-    if index > 3: #箱と車輪二つと注視点用box以外
         fixed_joints.append(ode.FixedJoint(world))
         fixed_joints[len(fixed_joints)-1].attach(b, None)  #障害物オブジェクトをその場に固定
         fixed_joints[len(fixed_joints)-1].setFixed()
@@ -826,13 +825,19 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
                      ], dtype=np.uint32)
     indices = np.append(indices, arr3)
 
-    #odeオブジェクトの頂点データを作成
+    #家具の頂点データを作成
     for index, b in enumerate(bodies):
+        #bodyの頂点データを作成
+        vertices, indices = draw_body(b, vertices, indices, init_object[index][3])  # init_object[index][3]は、colorのデータ
+
+    #ロボットの頂点データを作成
+    for index, b in enumerate(bodies_robo):
         if index == 3:#注視点用boxを描画しない
             pass
         else:
             #bodyの頂点データを作成
-            vertices, indices = draw_body(b, vertices, indices, init_object[index][3])  # init_object[index][3]は、colorのデータ
+            vertices, indices = draw_body(b, vertices, indices, init_object_robo[index][3])  # init_object[index][3]は、colorのデータ
+
 
     glBindVertexArray(VAO)
 
@@ -965,8 +970,8 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     # View matrix (camera)
     glViewport(340, 100, 320, 320)    
 
-    robo_x, robo_y, robo_z = bodies[2].getPosition()   #boxの座標を取得
-    gaze_x, gaze_y, gaze_z = bodies[3].getPosition()   #boxの座標を取得
+    robo_x, robo_y, robo_z = bodies_robo[2].getPosition()   #boxの座標を取得
+    gaze_x, gaze_y, gaze_z = bodies_robo[3].getPosition()   #boxの座標を取得
 
     #glm.lookat()でカメラの設定
     cameraPos = glm.vec3( robo_x, robo_y, robo_z)
@@ -1061,50 +1066,86 @@ def main():
         t = dt - (time.time() - lasttime)
         if (t > 0):
             time.sleep(t)
-        
+
         counter += 1
         #直進or回転
         if counter==50:     
             if display_image_recognition() == 0:
-                # Configure joint parameters (optional)
+
+                recog_flag = 0 
+
+                x1,y1,z1 = bodies_robo[2].getPosition() #robo
+                x2,y2,z2 = bodies_robo[3].getPosition() #注視点。注視点のz軸方向のローカル座標は-0.3。
+                prev_x = x2 - x1    #注視点のx軸方向のローカル座標
+                prev_z = z2 - z1    #注視点のz軸方向のローカル座標
+
                 hinge2_joints[0].setParam(ode.ParamVel, -2.5)  # Set desired velocity
                 hinge2_joints[0].setParam(ode.ParamFMax, 100)  # Set maximum force
 
                 # Configure joint parameters (optional)
                 hinge2_joints[1].setParam(ode.ParamVel, -2.5)  # Set desired velocity
                 hinge2_joints[1].setParam(ode.ParamFMax, 100)  # Set maximum force
-
+                #カウンターを最初に戻す
+                counter = 0
+                
             if display_image_recognition() == 1:
+                recog_flag = 1 
+
                 # Configure joint parameters (optional)
                 hinge2_joints[0].setParam(ode.ParamVel, -2.5)  # Set desired velocity
                 hinge2_joints[0].setParam(ode.ParamFMax, 100)  # Set maximum force
 
                 # Configure joint parameters (optional)
                 hinge2_joints[1].setParam(ode.ParamVel, 2.5)  # Set desired velocity
-                hinge2_joints[1].setParam(ode.ParamFMax, 100)  # Set maximum force
-        #車輪を止める
-        if counter == 100:  
-            # Configure joint parameters (optional)
-            hinge2_joints[0].setParam(ode.ParamVel, 0)  # Set desired velocity
-            hinge2_joints[0].setParam(ode.ParamFMax, 100)  # Set maximum force
+                hinge2_joints[1].setParam(ode.ParamFMax, 100)  # Set maximum 
 
-            # Configure joint parameters (optional)
-            hinge2_joints[1].setParam(ode.ParamVel, 0)  # Set desired velocity
-            hinge2_joints[1].setParam(ode.ParamFMax, 100)  # Set maximum force
-            #カウンターを最初に戻す
-            counter = 0
+        #回転の仕方
+        if  counter > 50 and recog_flag == 1:
+
+            x1,y1,z1 = bodies_robo[2].getPosition() #robo
+            x2,y2,z2 = bodies_robo[3].getPosition() #注視点。注視点のz軸方向のローカル座標は-0.3。
+            x3 = x2 - x1    #注視点のx軸方向のローカル座標
+            z3 = z2 - z1    #注視点のz軸方向のローカル座標
+
+            robo_rotation_flag = 0
+            #回転角度を90度プラスアルファごとにする。
+            if z3 < -0.25 and x3 > 0.02 and ( (prev_z < -0.25 ) == False ):
+                robo_rotation_flag = 1
+            if x3 > 0.25 and z3 > 0.02 and ( (prev_x > 0.25 ) == False ):
+                robo_rotation_flag = 1
+            if z3 > 0.25 and x3 < -0.02 and ( (prev_z > 0.25 ) == False ):
+                robo_rotation_flag = 1
+            if x3 < -0.25 and z3 < -0.02 and ( (prev_x < -0.25 ) == False ):
+                robo_rotation_flag = 1
+            #車輪を止める。
+            if robo_rotation_flag == 1:                
+                # Configure joint parameters (optional)
+                hinge2_joints[0].setParam(ode.ParamVel, 0)  # Set desired velocity
+                hinge2_joints[0].setParam(ode.ParamFMax, 100)  # Set maximum force
+
+                # Configure joint parameters (optional)
+                hinge2_joints[1].setParam(ode.ParamVel, 0)  # Set desired velocity
+                hinge2_joints[1].setParam(ode.ParamFMax, 100)  # Set maximum force
+
+                recog_flag = 0
+                #カウンターを最初に戻す
+                counter = 0
+        
 
         ##衝突検出部分を書き換え。#############
         # Simulate
         n = 4
         for i in range(n):
-
+            #家具とロボットの衝突
             for g1 in geoms:
-                for i in range(0,3):
-                    near_callback((world,contactgroup), g1, geoms[i]) # geoms[2]はbox_robo
-
+                for i2 in range(3):
+                    near_callback((world,contactgroup), g1, geoms_robo[i2]) # geoms_robo[0～2]は二輪箱ロボット。geoms_robo[3]は注視点用box。
+            #家具と床の衝突
             for g1 in geoms:
                 near_callback((world,contactgroup), g1, floor)
+            #ロボットと床の衝突
+            for i3 in range(3):
+                near_callback((world,contactgroup), geoms_robo[i3], floor)  # geoms_robo[0～2]は二輪箱ロボット。geoms_robo[3]は注視点用box。
 
                 #space.collide((world,contactgroup), ode.collide_callback(g1, floor))
                 # Simulation step
