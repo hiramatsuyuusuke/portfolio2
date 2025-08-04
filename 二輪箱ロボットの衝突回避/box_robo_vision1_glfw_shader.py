@@ -744,6 +744,19 @@ for iob in init_object: # iob  = [ name, shape, position, color ]
     drop_object2(iob, bodies, geoms, 10.0)
 
 #二輪箱ロボットのヒンジジョイントの作成
+hinge_joints=[]
+#二輪箱ロボットの車輪のヒンジジョイント 1
+hinge_joints.append(ode.HingeJoint(world))
+hinge_joints[0].attach(bodies_robo[2], bodies_robo[0])     #箱と車輪
+hinge_joints[0].setAnchor((sx, 0.15, sz + 0.0))
+hinge_joints[0].setAxis((0, 0, 1))  
+#二輪箱ロボットの車輪のヒンジジョイント 2
+hinge_joints.append(ode.HingeJoint(world))
+hinge_joints[1].attach(bodies_robo[2], bodies_robo[1])     #箱と車輪
+hinge_joints[1].setAnchor((sx, 0.15, sz + 0.0))
+hinge_joints[1].setAxis((0, 0, 1))  
+"""
+#二輪箱ロボットのヒンジジョイントの作成
 hinge2_joints=[]
 #二輪箱ロボットの車輪のヒンジ2ジョイント 1
 hinge2_joints.append(ode.Hinge2Joint(world))
@@ -763,6 +776,7 @@ hinge2_joints[1].setAxis2((0, 1, 0))  # Set the second axis (e.g., suspension/st
 # 第2軸の回転を固定
 hinge2_joints[1].setParam(ode.ParamVel2, 0)  # 速度をゼロに設定
 hinge2_joints[1].setParam(ode.ParamFMax2, 1000)  # 強い力で固定
+"""
 
 #固定ジョイントの作成
 fixed_joints=[]
@@ -879,7 +893,7 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     # Projection matrix (perspective)
     projection = np.identity(4, dtype=np.float32)
 
-    fov = 45
+    fov = 60
     aspect_ratio = 320 / 320
     near = 0.5
     far = 30.0
@@ -1069,24 +1083,18 @@ def main():
 
         counter += 1
         #直進or回転
-        if counter==50:     
+        if counter==30:     
             if display_image_recognition() == 0:
 
                 recog_flag = 0
 
-                #直進時のロボの方向ベクトルを取得
-                x1,y1,z1 = bodies_robo[2].getPosition() #robo
-                x2,y2,z2 = bodies_robo[3].getPosition() #注視点。注視点のz軸方向のローカル座標は-0.3。
-                prev_x = x2 - x1    #注視点のx軸方向のローカル座標
-                prev_z = z2 - z1    #注視点のz軸方向のローカル座標
+                # Configure joint parameters (optional)
+                hinge_joints[0].setParam(ode.ParamVel, -2.5)  # Set desired velocity
+                hinge_joints[0].setParam(ode.ParamFMax, 200)  # Set maximum force
 
                 # Configure joint parameters (optional)
-                hinge2_joints[0].setParam(ode.ParamVel, -2.5)  # Set desired velocity
-                hinge2_joints[0].setParam(ode.ParamFMax, 200)  # Set maximum force
-
-                # Configure joint parameters (optional)
-                hinge2_joints[1].setParam(ode.ParamVel, -2.5)  # Set desired velocity
-                hinge2_joints[1].setParam(ode.ParamFMax, 200)  # Set maximum force
+                hinge_joints[1].setParam(ode.ParamVel, -2.5)  # Set desired velocity
+                hinge_joints[1].setParam(ode.ParamFMax, 200)  # Set maximum force
                 #カウンターを最初に戻す
                 counter = 0
                 
@@ -1094,21 +1102,27 @@ def main():
 
                 recog_flag = 1 
 
+                #回転開始時のロボの方向ベクトルを取得
+                x1,y1,z1 = bodies_robo[2].getPosition() #robo
+                x2,y2,z2 = bodies_robo[3].getPosition() #注視点。注視点のz軸方向のローカル座標は-0.3。
+                prev_x = x2 - x1    #注視点のx軸方向のローカル座標
+                prev_z = z2 - z1    #注視点のz軸方向のローカル座標
+
                 #目標の回転角度まで回転した後のロボの方向ベクトルを取得
-                theta = 3.14*0.52   #目標の回転角度
+                theta = 3.14*0.53   #目標の回転角度
                 next_x = prev_x*cos(theta) - prev_z*sin(theta)  #回転後の注視点のx軸方向のローカル座標
                 next_z = prev_x*sin(theta) + prev_z*cos(theta)  #回転後の注視点のz軸方向のローカル座標
 
                 # Configure joint parameters (optional)
-                hinge2_joints[0].setParam(ode.ParamVel, -2.5)  # Set desired velocity
-                hinge2_joints[0].setParam(ode.ParamFMax, 200)  # Set maximum force
+                hinge_joints[0].setParam(ode.ParamVel, -2.5)  # Set desired velocity
+                hinge_joints[0].setParam(ode.ParamFMax, 200)  # Set maximum force
 
                 # Configure joint parameters (optional)
-                hinge2_joints[1].setParam(ode.ParamVel, 2.5)  # Set desired velocity
-                hinge2_joints[1].setParam(ode.ParamFMax, 200)  # Set maximum 
+                hinge_joints[1].setParam(ode.ParamVel, 2.5)  # Set desired velocity
+                hinge_joints[1].setParam(ode.ParamFMax, 200)  # Set maximum 
 
         #回転
-        if  counter > 50 and recog_flag == 1:
+        if  counter > 30 and recog_flag == 1:
 
             ##回転時のロボの方向ベクトルを取得
             x1,y1,z1 = bodies_robo[2].getPosition() #robo
@@ -1124,12 +1138,12 @@ def main():
             #車輪を止める。
             if robo_rotation_flag == 1:                
                 # Configure joint parameters (optional)
-                hinge2_joints[0].setParam(ode.ParamVel, 0)  # Set desired velocity
-                hinge2_joints[0].setParam(ode.ParamFMax, 200)  # Set maximum force
+                hinge_joints[0].setParam(ode.ParamVel, 0)  # Set desired velocity
+                hinge_joints[0].setParam(ode.ParamFMax, 200)  # Set maximum force
 
                 # Configure joint parameters (optional)
-                hinge2_joints[1].setParam(ode.ParamVel, 0)  # Set desired velocity
-                hinge2_joints[1].setParam(ode.ParamFMax, 200)  # Set maximum force
+                hinge_joints[1].setParam(ode.ParamVel, 0)  # Set desired velocity
+                hinge_joints[1].setParam(ode.ParamFMax, 200)  # Set maximum force
 
                 recog_flag = 0
                 #カウンターを最初に戻す
