@@ -893,7 +893,7 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO, gaze_x, gaze_
     # Projection matrix (perspective)
     projection = np.identity(4, dtype=np.float32)
 
-    fov = 45
+    fov = 60
     aspect_ratio = 320 / 320
     near = 0.5
     far = 30.0

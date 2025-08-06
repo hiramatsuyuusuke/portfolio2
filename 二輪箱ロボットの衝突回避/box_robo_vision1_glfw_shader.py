@@ -734,6 +734,27 @@ init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  0.0,  0.1, -4
 init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  2.0,  0.1, -4.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #20 : #ベッドの足
 init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  2.0,  0.1, -3.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #21 : #ベッドの足
 init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  0.0,  0.1, -3.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #22 : #ベッドの足
+"""
+init_object.append(["box",              ( 1.2, 0.2, 1.20),      (  2.5,  0.3, -1.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     # : #ベッドの天板
+init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  2.0,  0.1, -1.5 ),           ( 0.5, 0.5, 0.5, 1.0)])     # : #ベッドの足
+init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  3.0,  0.1, -1.5 ),           ( 0.5, 0.5, 0.5, 1.0)])     # : #ベッドの足
+init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  3.0,  0.1, -0.5 ),           ( 0.5, 0.5, 0.5, 1.0)])     # : #ベッドの足
+init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  2.0,  0.1, -0.5 ),           ( 0.5, 0.5, 0.5, 1.0)])     # : #ベッドの足
+init_object.append(["cylinder_y",       ( 0.4, 0.1),            (  2.0, 0.05,  3.0 ),           ( 1.0, 1.0, 1.0, 1.0)])     # : 扇風機の足1
+init_object.append(["cylinder_y",       ( 0.1, 0.6),            (  2.0,  0.3,  3.0 ),           ( 1.0, 1.0, 1.0, 1.0)])     # : 扇風機の足2
+init_object.append(["cylinder_z",       ( 0.3, 0.1),            (  2.0,  0.7,  2.75),           ( 1.0, 1.0, 1.0, 1.0)])     # : 扇風機の頭1
+init_object.append(["cylinder_z",       ( 0.1, 0.4),            (  2.0,  0.7,  3.0 ),           ( 1.0, 1.0, 1.0, 1.0)])     # : 扇風機の頭2
+init_object.append(["box",              ( 1.30, 0.2, 1.70),     ( -3.2,  0.7, -2.67),           ( 0.4, 0.23, 0.2, 1.0)])    # : 机の天板
+init_object.append(["box",              ( 0.15, 0.6, 0.15),     ( -3.7,  0.3, -3.5 ),           ( 0.4, 0.23, 0.2, 1.0)])    # : 机の脚
+init_object.append(["box",              ( 0.15, 0.6, 0.15),     ( -2.7,  0.3, -3.5 ),           ( 0.4, 0.23, 0.2, 1.0)])    # : 机の脚
+init_object.append(["box",              ( 1.00, 0.6, 0.50),     ( -3.2,  0.3, -2.1 ),           ( 0.4, 0.23, 0.2, 1.0)])    # : 机の引き出し
+init_object.append(["box",              ( 1.00, 0.1, 2.00),     ( -1.7,  0.6,  0.0 ),           ( 0.2, 0.20, 0.2, 1.0)])    # : 棚の天板1
+init_object.append(["box",              ( 1.00, 0.1, 2.00),     ( -1.7,  1.0,  0.0 ),           ( 0.2, 0.20, 0.2, 1.0)])    # : 棚の天板2
+init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -2.2,  0.5, -1.0 ),           ( 0.2, 0.20, 0.2, 1.0)])    # : 棚の脚
+init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -1.2,  0.5, -1.0 ),           ( 0.2, 0.20, 0.2, 1.0)])    # : 棚の脚
+init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -1.2,  0.5,  1.0 ),           ( 0.2, 0.20, 0.2, 1.0)])    # : 棚の脚
+init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -2.2,  0.5,  1.0 ),           ( 0.2, 0.20, 0.2, 1.0)])    # : 棚の脚
+"""
 
 #ロボットの描画の初期設定をbodies_robo[]とgeoms_robo[]に入れる
 for iob in init_object_robo: # iob  = [ name, shape, position, color ]
@@ -1027,6 +1048,9 @@ def main():
     global counter, state, lasttime
     global bodies, geoms
 
+    capture_lst = []
+    capture_num = 0
+
     #テクスチャ読み込み#
     tex_floor = load_texture("sample1.png")
     tex_wall = load_texture("sample2.png")
@@ -1081,12 +1105,23 @@ def main():
         if (t > 0):
             time.sleep(t)
 
+
         counter += 1
         #直進or回転
         if counter==30:     
             if display_image_recognition() == 0:
 
                 recog_flag = 0
+
+                #キャプチャ画像をリストに入れる
+                if capture_num < 5:
+                    capture_lst.append(capture2())
+                    capture_num += 1
+                #キャプチャ画像のリストをシフトして更新
+                if capture_num >= 5:
+                    capture_lst = capture_lst[1:]
+                    capture_lst.append(capture2())
+                    capture_num += 1
 
                 # Configure joint parameters (optional)
                 hinge_joints[0].setParam(ode.ParamVel, -2.5)  # Set desired velocity
@@ -1152,12 +1187,19 @@ def main():
 
         ##衝突検出部分を書き換え。#############
         # Simulate
+        stop_flag = 0
         n = 4
         for i in range(n):
             #家具とロボットの衝突
             for g1 in geoms:
                 for i2 in range(3):
                     near_callback((world,contactgroup), g1, geoms_robo[i2]) # geoms_robo[0～2]は二輪箱ロボット。geoms_robo[3]は注視点用box。
+
+                    # Check if the objects do collide #判定するだけで、衝突処理は行わない。
+                    contacts = ode.collide(g1, geoms_robo[i2])
+                    for c in contacts:
+                        stop_flag = 1
+
             #家具と床の衝突
             for g1 in geoms:
                 near_callback((world,contactgroup), g1, floor)
@@ -1171,6 +1213,26 @@ def main():
             # Remove all contact joints
             contactgroup.empty()
         ##衝突検出部分を書き換え。終了。#############
+
+        if stop_flag == 1 and counter < 1000:
+
+            #車輪を止める。
+            # Configure joint parameters (optional)
+            hinge_joints[0].setParam(ode.ParamVel, 0)  # Set desired velocity
+            hinge_joints[0].setParam(ode.ParamFMax, 200)  # Set maximum force
+
+            # Configure joint parameters (optional)
+            hinge_joints[1].setParam(ode.ParamVel, 0)  # Set desired velocity
+            hinge_joints[1].setParam(ode.ParamFMax, 200)  # Set maximum force
+
+            for i in range(5):
+                capture_lst[i].save( "stop" + str(i)+ ".jpg")  # 縮小した画像を保存
+  
+
+            print("stop")
+            recog_flag = 0
+            counter = 1000
+ 
 
         lasttime = time.time()
 
