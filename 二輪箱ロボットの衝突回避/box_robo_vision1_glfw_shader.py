@@ -184,7 +184,7 @@ def draw_body(body, vertices, indices, color_rgba):
 
         #回転前の頂点の法線データ（面方向の法線）
         n = []
-        for i in range(24):
+        for i in range(len(v)):
             if i < 4:
                 n.append(glm.vec3(  0,  0, -1)) # back face   # 0,1,2,3
             elif i < 8:
@@ -228,7 +228,7 @@ def draw_body(body, vertices, indices, color_rgba):
         vpx = []
         vpy = []
         vpz = []
-        for i in range(24):
+        for i in range(len(v)):
             rotated_vector = quaternion * v[i]    # 頂点座標を回転
             x,y,z = rotated_vector #回転後の頂点座標
             vpx.append(x)
@@ -239,7 +239,7 @@ def draw_body(body, vertices, indices, color_rgba):
         nx = []
         ny = []
         nz = []    
-        for i in range(24):
+        for i in range(len(v)):
             rotated_vector = quaternion * n[i]    # 頂点の法線を回転
             x,y,z = glm.normalize(rotated_vector)
             nx.append(x)
@@ -249,7 +249,7 @@ def draw_body(body, vertices, indices, color_rgba):
         # Cube vertices and normals (position XYZ + normals)
         px,py,pz = body.getPosition()   #boxの座標を取得
         arr1 = np.array([], dtype=np.float32)
-        for i in range(24):                                  
+        for i in range(len(v)):                                  
             arr2 = np.array([   vpx[i]+px, vpy[i]+py, vpz[i]+pz,        # positions
                                 nx[i], ny[i], nz[i],                    # normals
                                 color_r, color_g, color_b, color_a,     # color
@@ -342,7 +342,7 @@ def draw_body(body, vertices, indices, color_rgba):
         vpx = []
         vpy = []
         vpz = []
-        for i in range(rad_num*(height_num + 1)+2): # +2は上下の天板の分
+        for i in range(len(v)): # 
             rotated_vector = quaternion * v[i]    # 頂点座標を回転
             x,y,z = rotated_vector #回転後の頂点座標
             vpx.append(x)
@@ -353,7 +353,7 @@ def draw_body(body, vertices, indices, color_rgba):
         nx = []
         ny = []
         nz = []    
-        for i in range(rad_num*(height_num + 1)+2): # +2は上下の天板の分
+        for i in range(len(v)): #
             rotated_vector = quaternion * n[i]    # 頂点の法線を回転
             x,y,z = glm.normalize(rotated_vector)
             nx.append(x)
@@ -363,7 +363,7 @@ def draw_body(body, vertices, indices, color_rgba):
         # cylinder vertices and normals (position XYZ + normals)
         px,py,pz = body.getPosition()   #cylinderの座標を取得
         arr1 = np.array([], dtype=np.float32)
-        for i in range(rad_num*(height_num + 1)+2): # +2は上下の天板の分
+        for i in range(len(v)): # 
             arr2 = np.array([   vpx[i]+px, vpy[i]+py, vpz[i]+pz,        # positions
                                 nx[i], ny[i], nz[i],                    # normals
                                 color_r, color_g, color_b, color_a,     # color
@@ -707,33 +707,33 @@ sz = 2.0
 #odeオブジェクトbodies_robo[]の描画の初期設定
 init_object_robo = []
                          #name               #shape                  #position                       #color
-init_object_robo.append(["cylinder_z",       ( 0.15, 0.1),           ( sx, 0.15, sz + 0.17 ),  ( 0.3, 0.3, 1.0, 1.0)])     #0 : 二輪箱ロボットの車輪
-init_object_robo.append(["cylinder_z",       ( 0.15, 0.1),           ( sx, 0.15, sz - 0.17 ),  ( 0.3, 0.3, 1.0, 1.0)])     #1 : 二輪箱ロボットの車輪
-init_object_robo.append(["box",              ( 0.30, 0.28, 0.2),     ( sx + 0.0, 0.15, sz + 0.0 ),   ( 0.5, 0.9, 0.1, 1.0)])     #2 : 二輪箱ロボットの箱
-init_object_robo.append(["box",              ( 0.05, 0.05, 0.05),    ( sx - 0.3, 0.15, sz + 0.0 ),   ( 0.5, 0.9, 0.1, 1.0)])     #3 : 注視点用box。描画しない。
+init_object_robo.append(["cylinder_z",       ( 0.15, 0.1),           ( sx, 0.15, sz + 0.17 ),       ( 0.3, 0.3, 1.0, 1.0)])     #0 : 二輪箱ロボットの車輪
+init_object_robo.append(["cylinder_z",       ( 0.15, 0.1),           ( sx, 0.15, sz - 0.17 ),       ( 0.3, 0.3, 1.0, 1.0)])     #1 : 二輪箱ロボットの車輪
+init_object_robo.append(["box",              ( 0.30, 0.28, 0.2),     ( sx + 0.0, 0.15, sz + 0.0 ),  ( 0.5, 0.9, 0.1, 1.0)])     #2 : 二輪箱ロボットの箱
+init_object_robo.append(["box",              ( 0.01, 0.01, 0.01),    ( sx - 0.3, 0.15, sz + 0.0 ),  ( 0.5, 0.9, 0.1, 1.0)])     #3 : 注視点用box。描画しない。
 
 #odeオブジェクトbodies[]の描画の初期設定
 init_object = []
                     #name               #shape                  #position                       #color
-init_object.append(["box",              ( 1.30, 0.2, 1.70),     (  3.8,  0.7,  0.82),           ( 0.4, 0.23, 0.2, 1.0)])    #4 : 机の天板
-init_object.append(["box",              ( 0.15, 0.6, 0.15),     (  3.3,  0.3,  0.00),           ( 0.4, 0.23, 0.2, 1.0)])    #5 : 机の脚
-init_object.append(["box",              ( 0.15, 0.6, 0.15),     (  4.3,  0.3,  0.00),           ( 0.4, 0.23, 0.2, 1.0)])    #6 : 机の脚
-init_object.append(["box",              ( 1.00, 0.6, 0.50),     (  3.8,  0.3,  1.40),           ( 0.4, 0.23, 0.2, 1.0)])    #7 : 机の引き出し
-init_object.append(["box",              ( 1.00, 0.1, 2.00),     ( -3.7,  0.6,  1.00),           ( 0.2, 0.20, 0.2, 1.0)])    #8 : 棚の天板1
-init_object.append(["box",              ( 1.00, 0.1, 2.00),     ( -3.7,  1.0,  1.00),           ( 0.2, 0.20, 0.2, 1.0)])    #9 : 棚の天板2
-init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -4.2,  0.5,  0.00),           ( 0.2, 0.20, 0.2, 1.0)])    #10 : 棚の脚
-init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -3.2,  0.5,  0.00),           ( 0.2, 0.20, 0.2, 1.0)])    #11 : 棚の脚
-init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -3.2,  0.5,  2.00),           ( 0.2, 0.20, 0.2, 1.0)])    #12 : 棚の脚
-init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -4.2,  0.5,  2.00),           ( 0.2, 0.20, 0.2, 1.0)])    #13 : 棚の脚
+init_object.append(["box",              ( 1.30, 0.2, 1.70),     (  3.8,  0.7,  0.82),           ( 0.4, 0.23, 0.2, 1.0)])    #0 : 机の天板
+init_object.append(["box",              ( 0.15, 0.6, 0.15),     (  3.3,  0.3,  0.00),           ( 0.4, 0.23, 0.2, 1.0)])    #1 : 机の脚
+init_object.append(["box",              ( 0.15, 0.6, 0.15),     (  4.3,  0.3,  0.00),           ( 0.4, 0.23, 0.2, 1.0)])    #2 : 机の脚
+init_object.append(["box",              ( 1.00, 0.6, 0.50),     (  3.8,  0.3,  1.40),           ( 0.4, 0.23, 0.2, 1.0)])    #3 : 机の引き出し
+init_object.append(["box",              ( 1.00, 0.1, 2.00),     ( -3.7,  0.6,  1.00),           ( 0.2, 0.20, 0.2, 1.0)])    #4 : 棚の天板1
+init_object.append(["box",              ( 1.00, 0.1, 2.00),     ( -3.7,  1.0,  1.00),           ( 0.2, 0.20, 0.2, 1.0)])    #5 : 棚の天板2
+init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -4.2,  0.5,  0.00),           ( 0.2, 0.20, 0.2, 1.0)])    #6 : 棚の脚
+init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -3.2,  0.5,  0.00),           ( 0.2, 0.20, 0.2, 1.0)])    #7 : 棚の脚
+init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -3.2,  0.5,  2.00),           ( 0.2, 0.20, 0.2, 1.0)])    #8 : 棚の脚
+init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -4.2,  0.5,  2.00),           ( 0.2, 0.20, 0.2, 1.0)])    #9 : 棚の脚
 init_object.append(["cylinder_y",       ( 0.4, 0.1),            (  0.0,  0.05, 2.0 ),           ( 1.0, 1.0, 1.0, 1.0)])     #10 : 扇風機の足1
 init_object.append(["cylinder_y",       ( 0.1, 0.6),            (  0.0,  0.3,  2.0 ),           ( 1.0, 1.0, 1.0, 1.0)])     #11 : 扇風機の足2
 init_object.append(["cylinder_z",       ( 0.3, 0.1),            (  0.0,  0.7,  1.75),           ( 1.0, 1.0, 1.0, 1.0)])     #12 : 扇風機の頭1
 init_object.append(["cylinder_z",       ( 0.1, 0.4),            (  0.0,  0.7,  2.0 ),           ( 1.0, 1.0, 1.0, 1.0)])     #13 : 扇風機の頭2
-init_object.append(["box",              ( 2.2,  0.2, 1.20),     (  1.0,  0.3, -3.5 ),           ( 0.5, 0.5, 0.5, 1.0)])     #18 : #ベッドの天板
-init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  0.0,  0.1, -4.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #19 : #ベッドの足
-init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  2.0,  0.1, -4.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #20 : #ベッドの足
-init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  2.0,  0.1, -3.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #21 : #ベッドの足
-init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  0.0,  0.1, -3.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #22 : #ベッドの足
+init_object.append(["box",              ( 2.2,  0.2, 1.20),     (  1.0,  0.3, -3.5 ),           ( 0.5, 0.5, 0.5, 1.0)])     #14 : #ベッドの天板
+init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  0.0,  0.1, -4.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #15 : #ベッドの足
+init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  2.0,  0.1, -4.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #16 : #ベッドの足
+init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  2.0,  0.1, -3.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #17 : #ベッドの足
+init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  0.0,  0.1, -3.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     #18 : #ベッドの足
 """
 init_object.append(["box",              ( 1.2, 0.2, 1.20),      (  2.5,  0.3, -1.0 ),           ( 0.5, 0.5, 0.5, 1.0)])     # : #ベッドの天板
 init_object.append(["cylinder_y",       ( 0.1, 0.2),            (  2.0,  0.1, -1.5 ),           ( 0.5, 0.5, 0.5, 1.0)])     # : #ベッドの足
