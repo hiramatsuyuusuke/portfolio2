@@ -4,11 +4,14 @@
 import sys, os, random, time
 from math import *
 from OpenGL.GL import *
+from OpenGL.GL.framebufferobjects import *
 import glfw
 import glm
 import numpy as np
 
 import ode
+
+from pyrr import Matrix44, Vector3
 
 
 # Vertex Shader
@@ -21,39 +24,66 @@ layout(location = 1) in vec3 normal;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
+uniform mat4 lightSpaceMatrix;
 
-out vec3 FragPos;
-//out vec3 Normal;
-flat out vec3 Normal;
+out VS_OUT {
+    out vec3 FragPos;
+    out vec3 Normal;
+    out vec4 FragPosLightSpace;
+} vs_out;
 
 void main()
 {
-    FragPos = vec3(model * vec4(position, 1.0));
-    //Normal = mat3(transpose(inverse(model))) * normal;
-    Normal = normal;
-    gl_Position = projection * view * vec4(FragPos, 1.0);
+    vs_out.FragPos = vec3(model * vec4(position, 1.0));
+    vs_out.Normal = mat3(transpose(inverse(model))) * normal;
+    vs_out.FragPosLightSpace = lightSpaceMatrix * vec4(vs_out.FragPos, 1.0);
+
+    gl_Position = projection * view * vec4(vs_out.FragPos, 1.0);
 }
 """
 
 # Fragment Shader
 fragment_shader_source = """
 #version 330 core
+in VS_OUT {
+    in vec3 FragPos;
+    in vec3 Normal;
+    in vec4 FragPosLightSpace;
+} fs_in;
 
-in vec3 FragPos;
-//in vec3 Normal;
-flat in vec3 Normal;
-
-out vec4 FragColor;
-
+uniform sampler2D shadowMap;
 uniform vec3 lightDir;    // 光源の方向（正規化済み）
 uniform vec3 lightColor;
 uniform vec3 objectColor;
 uniform vec3 viewPos;
 
+float ShadowCalculation(vec4 fragPosLightSpace)
+{
+    // プロジェクション分割(正規化)
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    projCoords = projCoords * 0.5 + 0.5; // [0,1]に変換
+    
+    // 深度をシャドウマップから取得
+    float closestDepth = texture(shadowMap, projCoords.xy).r; 
+    float currentDepth = projCoords.z;
+
+    // シャドウ判定（バイアス付け）
+    float bias = 0.005;
+    float shadow = currentDepth - bias > closestDepth? 1.0 : 0.0;
+
+    // シャドウ範囲外は影無しにする
+    if(projCoords.z > 1.0)
+        shadow = 0.0;
+    return shadow;
+}
+
 void main()
 {
+    //
+    float shadow = ShadowCalculation(fs_in.FragPosLightSpace);
+
     // 法線ベクトルの正規化
-    vec3 norm = normalize(Normal);
+    vec3 norm = normalize(fs_in.Normal);
 
     // 光源方向は逆ベクトルで受け取ることが多いのでadjustしてください
     vec3 lightDirection = normalize(-lightDir);
@@ -67,8 +97,9 @@ void main()
     // 拡散光強度分だけ色乗算
     vec3 diffuse = diff * lightColor;
 
-    vec3 result = (ambient + diffuse) * objectColor;
-    FragColor = vec4(result, 1.0);
+    //
+    vec3 result = ((1.0 - shadow * 0.7) * (diffuse) + ambient) * objectColor;
+    gl_FragColor = vec4(result, 1.0);
 }
 """
 
@@ -100,7 +131,7 @@ def create_shader_program():
     return program
 
 # シェーダー用の頂点データと法線データを作成
-def draw_body(body, body_index, vertices, indices):
+def draw_body(body, vertices, indices):
     """Draw an ODE body.
     """
     #boxの頂点座標の計算
@@ -331,8 +362,19 @@ def near_callback(args, geom1, geom2):
         j = ode.ContactJoint(world, contactgroup, c)
         j.attach(geom1.getBody(), geom2.getBody())
 
-
 ######################################################################
+
+# Initialize GLFW
+glfw.init()
+
+# Create Window
+window = glfw.create_window(800, 600, "PyOpenGL GLFW drop box", None, None)
+if not window:
+    glfw.terminate()
+    #return
+
+#
+glfw.make_context_current(window)
 
 # Create a world object
 world = ode.World()
@@ -365,17 +407,38 @@ counter = 0
 objcount = 0
 lasttime = time.time()
 
-
 #シェーダーで描画
-def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
+def use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture):
 
+    #頂点のデータ
     vertices = np.array([], dtype=np.float32)
+    #三角形の頂点の番号
     indices = np.array([], dtype=np.uint32)
 
-    for index, b in enumerate(bodies):
-        #bodyの頂点データを作成
-        vertices, indices = draw_body(b, index, vertices, indices)
+    #床と壁の頂点データを作成
+    #床と壁のverticesデータを作成
+                        # positions        # normals        
+    floor_arr = np.array([  -3.0,  0.0,  -3.0,   0.0, 1.0,  0.0,  #床 0
+                            -3.0,  0.0,   3.0,   0.0, 1.0,  0.0,  #床 1
+                             3.0,  0.0,  -3.0,   0.0, 1.0,  0.0,  #床 2
+                             3.0,  0.0,   3.0,   0.0, 1.0,  0.0  #床 3
+                        ], dtype=np.float32)
+    vertices = np.append(vertices, floor_arr)   #頂点のデータ
+    #床と壁のIndicesデータを作成
+    if len(indices) == 0:
+        i = 0
+    else:
+        i = max(indices) + 1
+    arr3 = np.array([0+i,1+i,2+i,  3+i,1+i,2+i,  #床
+                    ], dtype=np.uint32)
+    indices = np.append(indices, arr3)  #三角形の頂点の番号
 
+    #bodyの頂点データを作成
+    for b in bodies:
+        #bodyの頂点データを作成
+        vertices, indices = draw_body(b, vertices, indices)
+    
+    #
     glBindVertexArray(VAO)
 
     # Vertex buffer
@@ -394,35 +457,14 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(3 * vertices.itemsize))
     glEnableVertexAttribArray(1)
 
+    #
     glBindBuffer(GL_ARRAY_BUFFER, 0)
     glBindVertexArray(0)
 
-    # Projection matrix (perspective)
-    projection = np.identity(4, dtype=np.float32)
-
-    fov = 45
-    aspect_ratio = 800 / 600
-    near = 1.0
-    far = 100.0
-
-    f = 1.0 / tan(radians(fov) / 2)
-    projection[0, 0] = f / aspect_ratio
-    projection[1, 1] = f
-    projection[2, 2] = (far + near) / (near - far)
-    projection[2, 3] = (2 * far * near) / (near - far)
-    projection[3, 2] = -1
-    projection[3, 3] = 0
-        
-    # View matrix (camera)
-    view = np.identity(4, dtype=np.float32)
-    view[3, 0] = 0.0  # Move on x axis
-    view[3, 1] = -1.0  # Move on y axis
-    view[3, 2] = -4.0  # Move on z axis
 
     # Start render 
-    #while not glfw.window_should_close(window):
-    glfw.poll_events()
 
+    glfw.poll_events()
     glClearColor(0.2, 0.3, 0.3, 1)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
@@ -442,6 +484,21 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     model[0, 2] = s
     model[2, 0] = -s
     model[2, 2] = c
+    
+    #1回目のレンダリングの設定：ライト視点の深度マップを生成するためのレンダリング。#####################
+    # Define light's position and target
+    light_position = Vector3([0.0, 3.0, 1.0])
+    light_target = Vector3([0.0, 0.0, 0.0])
+    light_up = Vector3([0.0, 1.0, 0.0])
+
+    # Create light's view matrix (lookAt matrix)
+    light_view = Matrix44.look_at(light_position, light_target, light_up)
+
+    # Define light's projection matrix (orthographic for directional light)
+    light_projection = Matrix44.orthogonal_projection(-3.0, 3.0, -3.0, 3.0, -10.0, 10.0)
+
+    # Combine to form the lightSpaceMatrix
+    lightSpaceMatrix = light_projection * light_view
 
     # Set uniform matrices
     model_loc = glGetUniformLocation(shader_program, "model")
@@ -450,40 +507,86 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     light_dir_loc = glGetUniformLocation(shader_program, "lightDir")
     light_color_loc = glGetUniformLocation(shader_program, "lightColor")
     object_color_loc = glGetUniformLocation(shader_program, "objectColor")
-    #view_pos_loc = glGetUniformLocation(shader_program, "viewPos")
+    light_space_matrix_loc = glGetUniformLocation(shader_program, "lightSpaceMatrix")
+    depth_map_location = glGetUniformLocation(shader_program, "shadowMap")
 
     # uniformのセット
     glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
-    glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
-    glUniformMatrix4fv(proj_loc, 1, GL_FALSE, projection)
+    glUniformMatrix4fv(view_loc, 1, GL_FALSE, light_view)
+    glUniformMatrix4fv(proj_loc, 1, GL_FALSE, light_projection)
+    glUniformMatrix4fv(light_space_matrix_loc, 1, GL_FALSE, lightSpaceMatrix)
     glUniform3f(light_dir_loc, 0.0, -3.0, -1.0)  # ディレクショナルライトの方向例
     glUniform3f(light_color_loc, 0.7, 0.7, 0.7)  # 白色光
     glUniform3f(object_color_loc, 1.0, 0.5, 0.31) # オブジェクトの色
-    #glUniform3f(view_pos_loc, 0.0, 0.0, 3.0)     # カメラ位置例
+    glUniform1i(depth_map_location, 0)  # テクスチャユニット0を指定 
 
-    # Draw cube
+    # Draw cube. 1回目のレンダリング：ライト視点の深度マップを生成するためのレンダリング。
+    # デフォルトフレームバッファにレンダリングしてからFBOに転送しているので、オフスクリーンレンダリングには、なっていない。
+    # オフスクリーンレンダリングには、レンダーバッファの生成とアタッチが必要？
+    glViewport(0, 0, 800, 600)
     glBindVertexArray(VAO)
     glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
+    
+    # デフォルトフレームバッファをFBOに転送。depth_textureとFBOはアタッチされている。
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0)   #デフォルトフレームバッファにバインド
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FBO)   #FBOにバインド
+    glBlitFramebuffer(0, 0, 800, 600,
+                        0, 0, 800, 600,
+                        GL_DEPTH_BUFFER_BIT, GL_NEAREST)    #転送
+    glBindFramebuffer(GL_FRAMEBUFFER, 0)  #デフォルトフレームバッファにバインド
 
-    glfw.swap_buffers(window)
+    # デフォルトフレームバッフへの1回目のレンダリングをクリア
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+    #2回目のレンダリングの設定#####################
+    # Define view position and target
+    view_position = Vector3([1.0, 0.5, 1.0])
+    view_target = Vector3([0.0, 0.0, 0.0])
+    view_up = Vector3([0.0, 1.0, 0.0])
+
+    # Create view matrix (lookAt matrix)
+    view = Matrix44.look_at(view_position, view_target, view_up)
+
+    # uniformのセット
+    glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
+
+    # Draw cube. 2回目のレンダリング。影付きのレンダリング。
+    glViewport(0, 0, 800, 600)
+    glBindTexture(GL_TEXTURE_2D, depth_texture )# テクスチャ0（ライト視点の深度マップ）にバインド。depth_textureとFBOはアタッチされている。
+    glBindVertexArray(VAO)
+    glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
+    glBindTexture(GL_TEXTURE_2D, 0)  # Unbind texture
+    
 
 def main():
     global counter, state, lasttime
     global bodies, geoms
 
-    # Initialize GLFW
-    glfw.init()
-
-    # Create Window
-    window = glfw.create_window(800, 600, "PyOpenGL GLFW Cube", None, None)
-    if not window:
-        glfw.terminate()
-        return
-    glfw.make_context_current(window)
-
-    # Enable depth test for 3D rendering
-    glEnable(GL_DEPTH_TEST)
-
+    #シャドウマッピング用にフレームバッファと深度テクスチャを設定。
+    # Create a framebuffer
+    FBO = glGenFramebuffers(1)  #
+    glEnable(GL_DEPTH_TEST)     # Enable depth test for 3D rendering
+    glDepthMask(GL_TRUE)        #
+    glDepthFunc( GL_LEQUAL )    #
+    #深度テクスチャ分の領域の生成
+    depth_texture = glGenTextures(1)
+    glBindTexture(GL_TEXTURE_2D, depth_texture )# テクスチャ0にバインド
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 800, 600, 0, GL_DEPTH_COMPONENT, GL_FLOAT, None) #CPUを使わないようにするため、Noneを指定して転送しない
+    # テクスチャパラメータの設定
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)    
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP)
+    glBindTexture(GL_TEXTURE_2D, 0)  # Unbind texture
+    #FBOにバインド
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO)  
+    #深度テクスチャ分の領域をFBOフレームバッファにアタッチ
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_texture, 0)
+    #デフォルトフレームバッファ（画面のバッファ）にバインド
+    glBindFramebuffer(GL_FRAMEBUFFER, 0) 
+    
+    #
     shader_program = create_shader_program()
 
     # Generate buffers and arrays
@@ -493,9 +596,9 @@ def main():
 
     #物理演算とシェーダのループ部分
     while not glfw.window_should_close(window):
-        
-        use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO)#シェーダーで描画
-        
+
+        use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture)  #シェーダーで描画
+
         t = dt - (time.time() - lasttime)
         if (t > 0):
             time.sleep(t)
@@ -523,11 +626,9 @@ def main():
         for i in range(n):
             for g1 in geoms:    
                 for g2 in geoms:
-        
                     near_callback((world,contactgroup), g1, g2)
 
             for g1 in geoms:
-
                 near_callback((world,contactgroup), g1, floor)
                 #space.collide((world,contactgroup), ode.collide_callback(g1, floor))
                 # Simulation step
@@ -538,11 +639,15 @@ def main():
 
         lasttime = time.time()
         
+        glfw.swap_buffers(window)
+        glfw.poll_events()
+
+
     # Cleanup
     glDeleteVertexArrays(1, [VAO])
     glDeleteBuffers(1, [VBO])
     glDeleteBuffers(1, [EBO])
-
+    glDeleteBuffers(1, [FBO])
     glfw.terminate()
 
 if __name__ == "__main__":
