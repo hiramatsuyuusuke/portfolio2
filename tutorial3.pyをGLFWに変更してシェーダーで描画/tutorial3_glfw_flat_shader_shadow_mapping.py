@@ -364,18 +364,6 @@ def near_callback(args, geom1, geom2):
 
 ######################################################################
 
-# Initialize GLFW
-glfw.init()
-
-# Create Window
-window = glfw.create_window(800, 600, "PyOpenGL GLFW drop box", None, None)
-if not window:
-    glfw.terminate()
-    #return
-
-#
-glfw.make_context_current(window)
-
 # Create a world object
 world = ode.World()
 world.setGravity( (0,-9.81,0) )
@@ -407,8 +395,13 @@ counter = 0
 objcount = 0
 lasttime = time.time()
 
+# 一回目のループをFBOにバインドした状態で抜けないと、FBOが機能しない場合があるのでfirst_framebuffer_flagを作成した。
+# 一度FBOが機能すれば、first_framebuffer_flag無しでも、一回目のループから機能することが多い。理由は不明。
+first_framebuffer_flag = 0
+
 #シェーダーで描画
 def use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture):
+    global first_framebuffer_flag
 
     #頂点のデータ
     vertices = np.array([], dtype=np.float32)
@@ -521,19 +514,18 @@ def use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture):
     glUniform1i(depth_map_location, 0)  # テクスチャユニット0を指定 
 
     # Draw cube. 1回目のレンダリング：ライト視点の深度マップを生成するためのレンダリング。
-    # デフォルトフレームバッファにレンダリングしてからFBOに転送しているので、オフスクリーンレンダリングには、なっていない。
-    # FBOに直接書き込むと、シャドウマッピングが機能しなかった。FBOはDepthのみなので、glDrawElementsとデータ型が合わない？
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO)  #FBOにバインド
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glViewport(0, 0, 800, 600)
     glBindVertexArray(VAO)
     glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
-    
-    # デフォルトフレームバッファをFBOに転送。depth_textureとFBOはアタッチされている。
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0)   #デフォルトフレームバッファにバインド
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FBO)   #FBOにバインド
-    glBlitFramebuffer(0, 0, 800, 600,
-                        0, 0, 800, 600,
-                        GL_DEPTH_BUFFER_BIT, GL_NEAREST)    #転送
-    glBindFramebuffer(GL_FRAMEBUFFER, 0)  #デフォルトフレームバッファにバインド
+
+    #一回目のループをFBOにバインドした状態で抜けないと、FBOが機能しない場合があるのでfirst_framebuffer_flagを作成した。
+    #一度FBOが機能すれば、first_framebuffer_flag無しでも、一回目のループから機能することが多い。理由は不明。
+    if first_framebuffer_flag == 1:
+        glBindFramebuffer(GL_FRAMEBUFFER, 0)  #デフォルトフレームバッファにバインド
+    else:
+        first_framebuffer_flag = 1
 
     # デフォルトフレームバッフへの1回目のレンダリングをクリア
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -562,9 +554,21 @@ def main():
     global counter, state, lasttime
     global bodies, geoms
 
+    # Initialize GLFW
+    glfw.init()
+
+    # Create Window
+    window = glfw.create_window(800, 600, "PyOpenGL GLFW drop box", None, None)
+    if not window:
+        glfw.terminate()
+        return
+
+    #
+    glfw.make_context_current(window)
+
     #シャドウマッピング用にフレームバッファと深度テクスチャを設定。
     # Create a framebuffer
-    FBO = glGenFramebuffers(1)  #
+    FBO = glGenFramebuffers(1)  #ウィンドウ生成直後にフレームバッファを生成するのが無難
     glEnable(GL_DEPTH_TEST)     # Enable depth test for 3D rendering
     glDepthMask(GL_TRUE)        #
     glDepthFunc( GL_LEQUAL )    #
@@ -644,6 +648,7 @@ def main():
 
 
     # Cleanup
+    glDeleteTextures([depth_texture])
     glDeleteVertexArrays(1, [VAO])
     glDeleteBuffers(1, [VBO])
     glDeleteBuffers(1, [EBO])
