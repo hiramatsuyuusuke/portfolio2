@@ -197,7 +197,7 @@ def draw_body(body, vertices, indices):
     #rot = np.array([[R[0], R[1], R[2], 0.0],
     #                [R[3], R[4], R[5], 0.0],
     #                [R[6], R[7], R[8], 0.0],
-    #                [   0,    0,    0, 1.0]])
+    #                [   0,    0,    0, 1.0]])#転置してるかもしれない。
     
     # glm用の回転行列に姿勢データを入れる
     rotation_matrix[0,0] = R[0]
@@ -522,7 +522,7 @@ def use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture):
 
     # Draw cube. 1回目のレンダリング：ライト視点の深度マップを生成するためのレンダリング。
     # デフォルトフレームバッファにレンダリングしてからFBOに転送しているので、オフスクリーンレンダリングには、なっていない。
-    # オフスクリーンレンダリングには、レンダーバッファの生成とアタッチが必要？
+    # FBOに直接書き込むと、シャドウマッピングが機能しなかった。FBOはDepthのみなので、glDrawElementsとデータ型が合わない？
     glViewport(0, 0, 800, 600)
     glBindVertexArray(VAO)
     glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
