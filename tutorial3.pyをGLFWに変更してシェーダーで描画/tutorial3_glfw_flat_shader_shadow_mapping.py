@@ -395,7 +395,7 @@ counter = 0
 objcount = 0
 lasttime = time.time()
 
-# 一回目のループをFBOにバインドした状態で抜けないと、FBOが機能しない場合があるのでfirst_framebuffer_flagを作成した。
+# FBOにバインドした状態でループを1回回さないと、FBOが機能しない場合があるのでfirst_framebuffer_flagを作成した。
 # 一度FBOが機能すれば、first_framebuffer_flag無しでも、一回目のループから機能することが多い。理由は不明。
 first_framebuffer_flag = 0
 
@@ -520,7 +520,7 @@ def use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture):
     glBindVertexArray(VAO)
     glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
 
-    #一回目のループをFBOにバインドした状態で抜けないと、FBOが機能しない場合があるのでfirst_framebuffer_flagを作成した。
+    #FBOにバインドした状態でループを1回回さないと、FBOが機能しない場合があるのでfirst_framebuffer_flagを作成した。
     #一度FBOが機能すれば、first_framebuffer_flag無しでも、一回目のループから機能することが多い。理由は不明。
     if first_framebuffer_flag == 1:
         glBindFramebuffer(GL_FRAMEBUFFER, 0)  #デフォルトフレームバッファにバインド
