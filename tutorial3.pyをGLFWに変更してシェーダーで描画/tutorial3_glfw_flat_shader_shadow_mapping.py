@@ -63,13 +63,23 @@ float ShadowCalculation(vec4 fragPosLightSpace)
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     projCoords = projCoords * 0.5 + 0.5; // [0,1]に変換
     
-    // 深度をシャドウマップから取得
-    float closestDepth = texture(shadowMap, projCoords.xy).r; 
-    float currentDepth = projCoords.z;
-
     // シャドウ判定（バイアス付け）
-    float bias = 0.005;
-    float shadow = currentDepth - bias > closestDepth? 1.0 : 0.0;
+    //float bias = 0.005;
+    float bias = 0.0005;    
+    float currentDepth = projCoords.z;
+    float shadow = 0.0;
+    vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+    //任意の範囲内で深度を比較した値(0 or 1)を足し合わせる
+    for(int x = -1; x <= 1; ++x)
+    {
+        for(int y = -1; y <= 1; ++y)
+        {    
+            // 深度をシャドウマップから取得
+            float closestDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r; 
+            shadow += currentDepth - bias > closestDepth? 1.0 : 0.0;
+        }
+    }
+    shadow /= 9.0; //深度を比較した任意の範囲で割る
 
     // シャドウ範囲外は影無しにする
     if(projCoords.z > 1.0)
@@ -480,7 +490,7 @@ def use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture):
     
     #1回目のレンダリングの設定：ライト視点の深度マップを生成するためのレンダリング。#####################
     # Define light's position and target
-    light_position = Vector3([0.0, 3.0, 1.0])
+    light_position = Vector3([0.0, 2.0*3.0, 3.0*3.0])
     light_target = Vector3([0.0, 0.0, 0.0])
     light_up = Vector3([0.0, 1.0, 0.0])
 
@@ -488,7 +498,8 @@ def use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture):
     light_view = Matrix44.look_at(light_position, light_target, light_up)
 
     # Define light's projection matrix (orthographic for directional light)
-    light_projection = Matrix44.orthogonal_projection(-3.0, 3.0, -3.0, 3.0, -10.0, 10.0)
+    #light_projection = Matrix44.orthogonal_projection(-3.0, 3.0, -3.0, 3.0, -10.0, 20.0)
+    light_projection = Matrix44.perspective_projection(45.0, 800.0/600.0, 1, 20)
 
     # Combine to form the lightSpaceMatrix
     lightSpaceMatrix = light_projection * light_view
@@ -508,7 +519,7 @@ def use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture):
     glUniformMatrix4fv(view_loc, 1, GL_FALSE, light_view)
     glUniformMatrix4fv(proj_loc, 1, GL_FALSE, light_projection)
     glUniformMatrix4fv(light_space_matrix_loc, 1, GL_FALSE, lightSpaceMatrix)
-    glUniform3f(light_dir_loc, 0.0, -3.0, -1.0)  # ディレクショナルライトの方向例
+    glUniform3f(light_dir_loc, 0.0, -2.0, -3.0)  # ディレクショナルライトの方向例
     glUniform3f(light_color_loc, 0.7, 0.7, 0.7)  # 白色光
     glUniform3f(object_color_loc, 1.0, 0.5, 0.31) # オブジェクトの色
     glUniform1i(depth_map_location, 0)  # テクスチャユニット0を指定 
@@ -532,7 +543,7 @@ def use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture):
 
     #2回目のレンダリングの設定#####################
     # Define view position and target
-    view_position = Vector3([1.0, 0.5, 1.0])
+    view_position = Vector3([1.0, 4.0, 4.0])
     view_target = Vector3([0.0, 0.0, 0.0])
     view_up = Vector3([0.0, 1.0, 0.0])
 
