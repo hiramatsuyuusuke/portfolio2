@@ -405,13 +405,9 @@ counter = 0
 objcount = 0
 lasttime = time.time()
 
-# FBOにバインドした状態でループを1回回さないと、FBOが機能しない場合があるのでfirst_framebuffer_flagを作成した。
-# 一度FBOが機能すれば、first_framebuffer_flag無しでも、一回目のループから機能することが多い。理由は不明。
-first_framebuffer_flag = 0
 
 #シェーダーで描画
 def use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture):
-    global first_framebuffer_flag
 
     #頂点のデータ
     vertices = np.array([], dtype=np.float32)
@@ -525,18 +521,14 @@ def use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture):
     glUniform1i(depth_map_location, 0)  # テクスチャユニット0を指定 
 
     # Draw cube. 1回目のレンダリング：ライト視点の深度マップを生成するためのレンダリング。
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO)  #FBOにバインド
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO)  #FBOにバインドする場所がここなら、FBOが機能する
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+    #glBindFramebuffer(GL_FRAMEBUFFER, FBO)  #FBOにバインドする場所がここだと、FBOが機能しない
     glViewport(0, 0, 800, 600)
     glBindVertexArray(VAO)
     glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
 
-    #FBOにバインドした状態でループを1回回さないと、FBOが機能しない場合があるのでfirst_framebuffer_flagを作成した。
-    #一度FBOが機能すれば、first_framebuffer_flag無しでも、一回目のループから機能することが多い。理由は不明。
-    if first_framebuffer_flag == 1:
-        glBindFramebuffer(GL_FRAMEBUFFER, 0)  #デフォルトフレームバッファにバインド
-    else:
-        first_framebuffer_flag = 1
+    glBindFramebuffer(GL_FRAMEBUFFER, 0)  #デフォルトフレームバッファにバインド
 
     # デフォルトフレームバッフへの1回目のレンダリングをクリア
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
