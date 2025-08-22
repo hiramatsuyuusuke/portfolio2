@@ -1,11 +1,10 @@
 #ODE-0.16.4のtutorial3.pyを書き換えたコードです。
 #https://hiramatsuyuusuke.github.io/portfolio2/product3.html
 
-import sys, os, random, time
+import random, time
 from math import *
 from OpenGL.GL import *
 import glfw
-import glm
 import numpy as np
 
 import ode
@@ -104,28 +103,28 @@ def draw_body(body, vertices, indices):
     #回転前の頂点座標データ
     v = []
     # back face
-    v.append( glm.vec3(-box_vx, -box_vy, -box_vz) )   #0
-    v.append( glm.vec3( box_vx, -box_vy, -box_vz) )   #1
-    v.append( glm.vec3( box_vx,  box_vy, -box_vz) )   #2
-    v.append( glm.vec3(-box_vx,  box_vy, -box_vz) )   #3
+    v.append( (-box_vx, -box_vy, -box_vz) )   #0
+    v.append( ( box_vx, -box_vy, -box_vz) )   #1
+    v.append( ( box_vx,  box_vy, -box_vz) )   #2
+    v.append( (-box_vx,  box_vy, -box_vz) )   #3
     # front face
-    v.append( glm.vec3(-box_vx, -box_vy,  box_vz) )   #4
-    v.append( glm.vec3( box_vx, -box_vy,  box_vz) )   #5
-    v.append( glm.vec3( box_vx,  box_vy,  box_vz) )   #6
-    v.append( glm.vec3(-box_vx,  box_vy,  box_vz) )   #7
+    v.append( (-box_vx, -box_vy,  box_vz) )   #4
+    v.append( ( box_vx, -box_vy,  box_vz) )   #5
+    v.append( ( box_vx,  box_vy,  box_vz) )   #6
+    v.append( (-box_vx,  box_vy,  box_vz) )   #7
 
    #回転前の頂点の法線データ（頂点の法線）
     n = []
     # back face
-    n.append(glm.vec3( -1, -1, -1))    # 0
-    n.append(glm.vec3(  1, -1, -1))    # 1
-    n.append(glm.vec3(  1,  1, -1))    # 2
-    n.append(glm.vec3( -1,  1, -1))    # 3
+    n.append(( -1, -1, -1))    # 0
+    n.append((  1, -1, -1))    # 1
+    n.append((  1,  1, -1))    # 2
+    n.append(( -1,  1, -1))    # 3
     # front face
-    n.append(glm.vec3( -1, -1,  1))    # 4
-    n.append(glm.vec3(  1, -1,  1))    # 5
-    n.append(glm.vec3(  1,  1,  1))    # 6
-    n.append(glm.vec3( -1,  1,  1))    # 7
+    n.append(( -1, -1,  1))    # 4
+    n.append((  1, -1,  1))    # 5
+    n.append((  1,  1,  1))    # 6
+    n.append(( -1,  1,  1))    # 7
 
     # Cube vertices and normals (position XYZ + normals)
     arr1 = np.array([], dtype=np.float32)
@@ -291,7 +290,6 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
 
     glClearColor(0.2, 0.3, 0.3, 1)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
 
     # Projection matrix (perspective)
     projection = np.identity(4, dtype=np.float32)
