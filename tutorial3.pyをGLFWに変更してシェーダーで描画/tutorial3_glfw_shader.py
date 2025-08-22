@@ -18,18 +18,16 @@ vertex_shader_source = """
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
 
-uniform mat4 model;
+uniform mat4 model; //boxの回転行列
 uniform mat4 view;
 uniform mat4 projection;
 
-out vec3 FragPos;
 out vec3 Normal;
 
 void main()
 {
-    FragPos = vec3(model * vec4(position, 1.0));
     Normal = mat3(transpose(inverse(model))) * normal;
-    gl_Position = projection * view * vec4(FragPos, 1.0);
+    gl_Position = projection * view * model * vec4(position, 1.0);
 }
 """
 
@@ -37,10 +35,7 @@ void main()
 fragment_shader_source = """
 #version 330 core
 
-in vec3 FragPos;
 in vec3 Normal;
-
-out vec4 FragColor;
 
 uniform vec3 lightDir;    // 光源の方向（正規化済み）
 uniform vec3 lightColor;
@@ -65,7 +60,7 @@ void main()
     vec3 diffuse = diff * lightColor;
 
     vec3 result = (ambient + diffuse) * objectColor;
-    FragColor = vec4(result, 1.0);
+    gl_FragColor = vec4(result, 1.0);
 }
 """
 
@@ -97,7 +92,7 @@ def create_shader_program():
     return program
 
 # シェーダー用の頂点データと法線データを作成
-def draw_body(body, body_index, vertices, indices):
+def draw_body(body, vertices, indices):
     """Draw an ODE body.
     """
     #boxの頂点座標の計算
@@ -132,60 +127,11 @@ def draw_body(body, body_index, vertices, indices):
     n.append(glm.vec3(  1,  1,  1))    # 6
     n.append(glm.vec3( -1,  1,  1))    # 7
 
-    # glm用（後でデータを入れ替える）の回転行列を作成
-    rotation_matrix = glm.rotate(glm.mat4(1.0), glm.radians(0), glm.vec3(0, 0, 1))
-
-    #姿勢データを取得
-    R = body.getRotation()
-    #rot = np.array([[R[0], R[1], R[2], 0.0],
-    #                [R[3], R[4], R[5], 0.0],
-    #                [R[6], R[7], R[8], 0.0],
-    #                [   0,    0,    0, 1.0]])
-    
-    # glm用の回転行列に姿勢データを入れる
-    rotation_matrix[0,0] = R[0]
-    rotation_matrix[1,0] = R[1]
-    rotation_matrix[2,0] = R[2]
-
-    rotation_matrix[0,1] = R[3]
-    rotation_matrix[1,1] = R[4]
-    rotation_matrix[2,1] = R[5]
-
-    rotation_matrix[0,2] = R[6]
-    rotation_matrix[1,2] = R[7]
-    rotation_matrix[2,2] = R[8]
-
-    # 回転行列からクォータニオンを生成
-    quaternion = glm.quat_cast(rotation_matrix)
-
-    #頂点座標の回転変換
-    vpx = []
-    vpy = []
-    vpz = []
-    for i in range(8):
-        rotated_vector = quaternion * v[i]    # 頂点座標を回転
-        x,y,z = rotated_vector #回転後の頂点座標
-        vpx.append(x)
-        vpy.append(y)
-        vpz.append(z)
-
-    #頂点の法線の回転変換
-    nx = []
-    ny = []
-    nz = []    
-    for i in range(8):
-        rotated_vector = quaternion * n[i]    # 頂点の法線を回転
-        x,y,z = glm.normalize(rotated_vector)
-        nx.append(x)
-        ny.append(y)
-        nz.append(z)
-        
     # Cube vertices and normals (position XYZ + normals)
-    px,py,pz = body.getPosition()   #boxの座標を取得
     arr1 = np.array([], dtype=np.float32)
     for i in range(8):
-                         # positions                        # normals
-        arr2 = np.array([ vpx[i]+px, vpy[i]+py, vpz[i]+pz,  nx[i], ny[i], nz[i]], dtype=np.float32)
+                          # vertex positions          # normals
+        arr2 = np.array([ v[i][0], v[i][1], v[i][2],  n[i][0], n[i][1], n[i][2]], dtype=np.float32)
         arr1 = np.append(arr1, arr2)
     vertices_result = np.append(vertices, arr1)
     
@@ -343,33 +289,9 @@ lasttime = time.time()
 #シェーダーで描画
 def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
 
-    vertices = np.array([], dtype=np.float32)
-    indices = np.array([], dtype=np.uint32)
+    glClearColor(0.2, 0.3, 0.3, 1)
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-    for index, b in enumerate(bodies):
-        #bodyの頂点データを作成
-        vertices, indices = draw_body(b, index, vertices, indices)
-
-    glBindVertexArray(VAO)
-
-    # Vertex buffer
-    glBindBuffer(GL_ARRAY_BUFFER, VBO)
-    glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STATIC_DRAW)
-
-    # Element buffer
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.nbytes, indices, GL_STATIC_DRAW)
-
-    # Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(0))
-    glEnableVertexAttribArray(0)
-
-    # normal attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(3 * vertices.itemsize))
-    glEnableVertexAttribArray(1)
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0)
-    glBindVertexArray(0)
 
     # Projection matrix (perspective)
     projection = np.identity(4, dtype=np.float32)
@@ -394,28 +316,7 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     view[3, 2] = -4.0  # Move on z axis
 
     # Start render 
-    #while not glfw.window_should_close(window):
-    glfw.poll_events()
-
-    glClearColor(0.2, 0.3, 0.3, 1)
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
     glUseProgram(shader_program)
-
-    # Calculate rotation angle
-    time = glfw.get_time()
-    angle = 0
-
-    # Model matrix: rotate cube over time
-    model = np.identity(4, dtype=np.float32)
-    c = cos(angle)
-    s = sin(angle)
-
-    # Rotation around Y axis
-    model[0, 0] = c
-    model[0, 2] = s
-    model[2, 0] = -s
-    model[2, 2] = c
 
     # Set uniform matrices
     model_loc = glGetUniformLocation(shader_program, "model")
@@ -424,21 +325,73 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     light_dir_loc = glGetUniformLocation(shader_program, "lightDir")
     light_color_loc = glGetUniformLocation(shader_program, "lightColor")
     object_color_loc = glGetUniformLocation(shader_program, "objectColor")
-    #view_pos_loc = glGetUniformLocation(shader_program, "viewPos")
 
     # uniformのセット
-    glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
     glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
     glUniformMatrix4fv(proj_loc, 1, GL_FALSE, projection)
     glUniform3f(light_dir_loc, 0.0, -3.0, -1.0)  # ディレクショナルライトの方向例
     glUniform3f(light_color_loc, 0.7, 0.7, 0.7)  # 白色光
     glUniform3f(object_color_loc, 1.0, 0.5, 0.31) # オブジェクトの色
-    #glUniform3f(view_pos_loc, 0.0, 0.0, 3.0)     # カメラ位置例
 
-    # Draw cube
-    glBindVertexArray(VAO)
-    glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
+    #オブジェクトをひとつずつ転送して描画
+    for body in bodies:
 
+        vertices = np.array([], dtype=np.float32)
+        indices = np.array([], dtype=np.uint32)
+
+        #bodyの頂点データを作成
+        vertices, indices = draw_body(body, vertices, indices)
+
+        glBindVertexArray(VAO)
+
+        # Vertex buffer
+        glBindBuffer(GL_ARRAY_BUFFER, VBO)
+        glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STATIC_DRAW)
+
+        # Element buffer
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.nbytes, indices, GL_STATIC_DRAW)
+
+        # Position attribute
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(0))
+        glEnableVertexAttribArray(0)
+
+        # normal attribute
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(3 * vertices.itemsize))
+        glEnableVertexAttribArray(1)
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        glBindVertexArray(0)
+
+        # Model matrix: rotate box
+        model = np.identity(4, dtype=np.float32)
+
+        #boxの姿勢を取得して回転行列に代入
+        R = body.getRotation()
+        model[0,0] = R[0]
+        model[1,0] = R[1]
+        model[2,0] = R[2]
+        model[0,1] = R[3]
+        model[1,1] = R[4]
+        model[2,1] = R[5]
+        model[0,2] = R[6]
+        model[1,2] = R[7]
+        model[2,2] = R[8]
+
+        #boxの座標を取得して回転行列に代入
+        px,py,pz = body.getPosition()
+        model[3, 0] = px
+        model[3, 1] = py
+        model[3, 2] = pz
+
+        # uniformのセット
+        glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
+
+        # Draw cube
+        glBindVertexArray(VAO)
+        glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
+
+    glfw.poll_events()
     glfw.swap_buffers(window)
 
 def main():
