@@ -286,12 +286,12 @@ lasttime = time.time()
 
 #キー入力
 def process_input(window):
-    # Example: Close window on pressing ESC
+    # Close window on pressing ESC
     if glfw.get_key(window, glfw.KEY_ESCAPE) == glfw.PRESS:
         glfw.set_window_should_close(window, True)
 
 #シェーダーで描画
-def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
+def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO, vertices_data_list):
 
     glClearColor(0.2, 0.3, 0.3, 1)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -336,15 +336,12 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
     glUniform3f(light_color_loc, 0.7, 0.7, 0.7)  # 白色光
     glUniform3f(object_color_loc, 1.0, 0.5, 0.31) # オブジェクトの色
 
-    #オブジェクトをひとつずつ転送して描画
-    for body in bodies:
+    #boxの頂点データを一つのboxごとに転送して描画
+    for vdl in vertices_data_list:
 
-        vertices = np.array([], dtype=np.float32)
-        indices = np.array([], dtype=np.uint32)
-
-        #bodyの頂点データを作成
-        vertices, indices = draw_body(body, vertices, indices)
-
+        #boxごとの頂点リストから頂点データを取得
+        vertices, indices, body_index = vdl
+        #
         glBindVertexArray(VAO)
 
         # Vertex buffer
@@ -370,7 +367,10 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
         model = np.identity(4, dtype=np.float32)
 
         #boxの姿勢を取得して回転行列に代入
-        R = body.getRotation()
+        if body_index != None:
+            R = bodies[body_index].getRotation()
+        else:
+            R = (0,0,0,0,0,0,0,0,0)
         model[0,0] = R[0]
         model[1,0] = R[1]
         model[2,0] = R[2]
@@ -382,7 +382,10 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
         model[2,2] = R[8]
 
         #boxの座標を取得して回転行列に代入
-        px,py,pz = body.getPosition()
+        if body_index != None:
+            px,py,pz = bodies[body_index].getPosition()
+        else:
+            px,py,pz = 0,0,0
         model[3, 0] = px
         model[3, 1] = py
         model[3, 2] = pz
@@ -405,7 +408,7 @@ def main():
     glfw.init()
 
     # Create Window
-    window = glfw.create_window(800, 600, "PyOpenGL GLFW dropbox. ESCキーでウィンドウを閉じる。", None, None)
+    window = glfw.create_window(800, 600, "PyODE GLFW dropbox. ESCキーでウィンドウを閉じる。", None, None)
     if not window:
         glfw.terminate()
         return
@@ -414,6 +417,7 @@ def main():
     # Enable depth test for 3D rendering
     glEnable(GL_DEPTH_TEST)
 
+    #
     shader_program = create_shader_program()
 
     # Generate buffers and arrays
@@ -421,13 +425,30 @@ def main():
     VBO = glGenBuffers(1)
     EBO = glGenBuffers(1)
 
+    #boxごとの頂点リスト（シェーダー用のリスト）
+    vertices_data_list = []
+
     #物理演算とシェーダのループ部分
     while not glfw.window_should_close(window):
+        # Handle inputs. ESCキーでウィンドウを閉じる
+        process_input(window)  
 
-        process_input(window)  # Handle inputs. ESCキーでウィンドウを閉じる
+        #頂点リスト（シェーダー用のリスト）にbody（ODEのオブジェクト）の頂点データを追加
+        for index, body in enumerate(bodies):
+            #body（ODEのオブジェクト）の数が、boxごとの頂点リスト（シェーダー用のリスト）の要素数より多い時、boxごとの頂点リストにbodyの頂点データを追加
+            if index + 1 > len(vertices_data_list):
+                #
+                vertices = np.array([], dtype=np.float32)
+                indices = np.array([], dtype=np.uint32)
+                #body（ODEのオブジェクト）の頂点データ（シェーダー用）を作成
+                vertices, indices = draw_body(body, vertices, indices)
+                #boxごとの頂点リスト（シェーダー用のリスト）にbody（ODEのオブジェクト）の頂点データを追加
+                vertices_data_list.append([vertices, indices, index])
 
-        use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO)#シェーダーで描画
+        #シェーダーで描画
+        use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO, vertices_data_list)
         
+        #物理演算
         t = dt - (time.time() - lasttime)
         if (t > 0):
             time.sleep(t)
