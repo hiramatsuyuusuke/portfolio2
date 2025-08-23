@@ -284,6 +284,11 @@ counter = 0
 objcount = 0
 lasttime = time.time()
 
+#キー入力
+def process_input(window):
+    # Example: Close window on pressing ESC
+    if glfw.get_key(window, glfw.KEY_ESCAPE) == glfw.PRESS:
+        glfw.set_window_should_close(window, True)
 
 #シェーダーで描画
 def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
@@ -400,7 +405,7 @@ def main():
     glfw.init()
 
     # Create Window
-    window = glfw.create_window(800, 600, "PyOpenGL GLFW Cube", None, None)
+    window = glfw.create_window(800, 600, "PyOpenGL GLFW dropbox. ESCキーでウィンドウを閉じる。", None, None)
     if not window:
         glfw.terminate()
         return
@@ -418,7 +423,9 @@ def main():
 
     #物理演算とシェーダのループ部分
     while not glfw.window_should_close(window):
-        
+
+        process_input(window)  # Handle inputs. ESCキーでウィンドウを閉じる
+
         use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO)#シェーダーで描画
         
         t = dt - (time.time() - lasttime)
