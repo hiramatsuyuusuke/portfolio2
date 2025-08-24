@@ -1,17 +1,15 @@
 #ODE-0.16.4のtutorial3.pyを書き換えたコードです。
 #https://hiramatsuyuusuke.github.io/portfolio2/product3.html
 
-import sys, os, random, time
+import random, time
 from math import *
 from OpenGL.GL import *
 from OpenGL.GL.framebufferobjects import *
 import glfw
-import glm
 import numpy as np
+from pyrr import Matrix44, Vector3
 
 import ode
-
-from pyrr import Matrix44, Vector3
 
 
 # Vertex Shader
@@ -27,18 +25,16 @@ uniform mat4 projection;
 uniform mat4 lightSpaceMatrix;
 
 out VS_OUT {
-    out vec3 FragPos;
     out vec3 Normal;
     out vec4 FragPosLightSpace;
 } vs_out;
 
 void main()
 {
-    vs_out.FragPos = vec3(model * vec4(position, 1.0));
     vs_out.Normal = mat3(transpose(inverse(model))) * normal;
-    vs_out.FragPosLightSpace = lightSpaceMatrix * vec4(vs_out.FragPos, 1.0);
+    vs_out.FragPosLightSpace = lightSpaceMatrix * model * vec4(position, 1.0);
 
-    gl_Position = projection * view * vec4(vs_out.FragPos, 1.0);
+    gl_Position = projection * view * model * vec4(position, 1.0);
 }
 """
 
@@ -46,7 +42,6 @@ void main()
 fragment_shader_source = """
 #version 330 core
 in VS_OUT {
-    in vec3 FragPos;
     in vec3 Normal;
     in vec4 FragPosLightSpace;
 } fs_in;
@@ -55,7 +50,6 @@ uniform sampler2D shadowMap;
 uniform vec3 lightDir;    // 光源の方向（正規化済み）
 uniform vec3 lightColor;
 uniform vec3 objectColor;
-uniform vec3 viewPos;
 
 float ShadowCalculation(vec4 fragPosLightSpace)
 {
@@ -69,7 +63,7 @@ float ShadowCalculation(vec4 fragPosLightSpace)
     float currentDepth = projCoords.z;
     float shadow = 0.0;
     vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
-    //任意の範囲内で深度を比較した値(0 or 1)を足し合わせる
+    //任意の範囲内で深度を比較した結果(0 or 1)を足し合わせる
     for(int x = -1; x <= 1; ++x)
     {
         for(int y = -1; y <= 1; ++y)
@@ -153,106 +147,57 @@ def draw_body(body, vertices, indices):
     #回転前の頂点座標データ
     v = []
     # back face
-    v.append( glm.vec3(-box_vx, -box_vy, -box_vz) )    #0
-    v.append( glm.vec3( box_vx, -box_vy, -box_vz) )   #1
-    v.append( glm.vec3( box_vx,  box_vy, -box_vz) )   #2
-    v.append( glm.vec3(-box_vx,  box_vy, -box_vz) )   #3
+    v.append( (-box_vx, -box_vy, -box_vz) )   #0
+    v.append( ( box_vx, -box_vy, -box_vz) )   #1
+    v.append( ( box_vx,  box_vy, -box_vz) )   #2
+    v.append( (-box_vx,  box_vy, -box_vz) )   #3
     # front face
-    v.append( glm.vec3(-box_vx, -box_vy,  box_vz) )   #4
-    v.append( glm.vec3( box_vx, -box_vy,  box_vz) )   #5
-    v.append( glm.vec3( box_vx,  box_vy,  box_vz) )   #6
-    v.append( glm.vec3(-box_vx,  box_vy,  box_vz) )   #7
+    v.append( (-box_vx, -box_vy,  box_vz) )   #4
+    v.append( ( box_vx, -box_vy,  box_vz) )   #5
+    v.append( ( box_vx,  box_vy,  box_vz) )   #6
+    v.append( (-box_vx,  box_vy,  box_vz) )   #7
     # bottom face
-    v.append( glm.vec3(-box_vx, -box_vy,  box_vz) )   #8
-    v.append( glm.vec3( box_vx, -box_vy,  box_vz) )   #9
-    v.append( glm.vec3( box_vx, -box_vy, -box_vz) )   #10
-    v.append( glm.vec3(-box_vx, -box_vy, -box_vz) )   #11
+    v.append( (-box_vx, -box_vy,  box_vz) )   #8
+    v.append( ( box_vx, -box_vy,  box_vz) )   #9
+    v.append( ( box_vx, -box_vy, -box_vz) )   #10
+    v.append( (-box_vx, -box_vy, -box_vz) )   #11
     # top face
-    v.append( glm.vec3( box_vx,  box_vy,  box_vz) )   #12
-    v.append( glm.vec3(-box_vx,  box_vy,  box_vz) )   #13
-    v.append( glm.vec3(-box_vx,  box_vy, -box_vz) )   #14
-    v.append( glm.vec3( box_vx,  box_vy, -box_vz) )   #15
+    v.append( ( box_vx,  box_vy,  box_vz) )   #12
+    v.append( (-box_vx,  box_vy,  box_vz) )   #13
+    v.append( (-box_vx,  box_vy, -box_vz) )   #14
+    v.append( ( box_vx,  box_vy, -box_vz) )   #15
     # left face
-    v.append( glm.vec3(-box_vx, -box_vy,  box_vz) )   #16
-    v.append( glm.vec3(-box_vx,  box_vy,  box_vz) )   #17
-    v.append( glm.vec3(-box_vx,  box_vy, -box_vz) )   #18
-    v.append( glm.vec3(-box_vx, -box_vy, -box_vz) )   #19
+    v.append( (-box_vx, -box_vy,  box_vz) )   #16
+    v.append( (-box_vx,  box_vy,  box_vz) )   #17
+    v.append( (-box_vx,  box_vy, -box_vz) )   #18
+    v.append( (-box_vx, -box_vy, -box_vz) )   #19
     # right face
-    v.append( glm.vec3( box_vx, -box_vy,  box_vz) )   #20
-    v.append( glm.vec3( box_vx,  box_vy,  box_vz) )   #21
-    v.append( glm.vec3( box_vx,  box_vy, -box_vz) )   #22
-    v.append( glm.vec3( box_vx, -box_vy, -box_vz) )   #23
+    v.append( ( box_vx, -box_vy,  box_vz) )   #20
+    v.append( ( box_vx,  box_vy,  box_vz) )   #21
+    v.append( ( box_vx,  box_vy, -box_vz) )   #22
+    v.append( ( box_vx, -box_vy, -box_vz) )   #23
 
    #回転前の頂点の法線データ（面方向の法線）
     n = []
     for i in range(24):
         if i < 4:
-            n.append(glm.vec3(  0,  0, -1)) # back face   # 0,1,2,3
+            n.append((  0,  0, -1)) # back face   # 0,1,2,3
         elif i < 8:
-            n.append(glm.vec3(  0,  0,  1))  # front face   # 4,5,6,7
+            n.append((  0,  0,  1))  # front face   # 4,5,6,7
         elif i < 12:
-            n.append(glm.vec3(  0, -1,  0))  # bottom face   # 8,9,10,11
+            n.append((  0, -1,  0))  # bottom face   # 8,9,10,11
         elif i < 16:
-            n.append(glm.vec3(  0,  1,  0))  # top face   # 12,13,14,15
+            n.append((  0,  1,  0))  # top face   # 12,13,14,15
         elif i < 20:
-            n.append(glm.vec3( -1,  0,  0))  # left face   # 16,17,18,19
+            n.append(( -1,  0,  0))  # left face   # 16,17,18,19
         elif i < 24:
-            n.append(glm.vec3(  1,  0,  0))  # right face   # 20,21,22,23
+            n.append((  1,  0,  0))  # right face   # 20,21,22,23
 
-    # glm用（後でデータを入れ替える）の回転行列を作成
-    rotation_matrix = glm.rotate(glm.mat4(1.0), glm.radians(0), glm.vec3(0, 0, 1))
-
-    #姿勢データを取得
-    R = body.getRotation()
-    #rot = np.array([[R[0], R[1], R[2], 0.0],
-    #                [R[3], R[4], R[5], 0.0],
-    #                [R[6], R[7], R[8], 0.0],
-    #                [   0,    0,    0, 1.0]])#転置してるかもしれない。
-    
-    # glm用の回転行列に姿勢データを入れる
-    rotation_matrix[0,0] = R[0]
-    rotation_matrix[1,0] = R[1]
-    rotation_matrix[2,0] = R[2]
-
-    rotation_matrix[0,1] = R[3]
-    rotation_matrix[1,1] = R[4]
-    rotation_matrix[2,1] = R[5]
-
-    rotation_matrix[0,2] = R[6]
-    rotation_matrix[1,2] = R[7]
-    rotation_matrix[2,2] = R[8]
-
-    # 回転行列からクォータニオンを生成
-    quaternion = glm.quat_cast(rotation_matrix)
-
-    #頂点座標の回転変換
-    vpx = []
-    vpy = []
-    vpz = []
-    for i in range(24):
-        rotated_vector = quaternion * v[i]    # 頂点座標を回転
-        x,y,z = rotated_vector #回転後の頂点座標
-        vpx.append(x)
-        vpy.append(y)
-        vpz.append(z)
-
-    #頂点の法線の回転変換
-    nx = []
-    ny = []
-    nz = []    
-    for i in range(24):
-        rotated_vector = quaternion * n[i]    # 頂点の法線を回転
-        x,y,z = glm.normalize(rotated_vector)
-        nx.append(x)
-        ny.append(y)
-        nz.append(z)
-        
     # Cube vertices and normals (position XYZ + normals)
-    px,py,pz = body.getPosition()   #boxの座標を取得
     arr1 = np.array([], dtype=np.float32)
     for i in range(24):
-                         # positions                        # normals
-        arr2 = np.array([ vpx[i]+px, vpy[i]+py, vpz[i]+pz,  nx[i], ny[i], nz[i]], dtype=np.float32)
+                          # vertex positions          # normals
+        arr2 = np.array([ v[i][0], v[i][1], v[i][2],  n[i][0], n[i][1], n[i][2]], dtype=np.float32)
         arr1 = np.append(arr1, arr2)
     vertices_result = np.append(vertices, arr1)
     
@@ -407,151 +352,176 @@ lasttime = time.time()
 
 
 #シェーダーで描画
-def use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture):
+def use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture, vertices_data_list):
 
-    #頂点のデータ
-    vertices = np.array([], dtype=np.float32)
-    #三角形の頂点の番号
-    indices = np.array([], dtype=np.uint32)
-
-    #床と壁の頂点データを作成
-    #床と壁のverticesデータを作成
-                        # positions        # normals        
-    floor_arr = np.array([  -3.0,  0.0,  -3.0,   0.0, 1.0,  0.0,  #床 0
-                            -3.0,  0.0,   3.0,   0.0, 1.0,  0.0,  #床 1
-                             3.0,  0.0,  -3.0,   0.0, 1.0,  0.0,  #床 2
-                             3.0,  0.0,   3.0,   0.0, 1.0,  0.0  #床 3
-                        ], dtype=np.float32)
-    vertices = np.append(vertices, floor_arr)   #頂点のデータ
-    #床と壁のIndicesデータを作成
-    if len(indices) == 0:
-        i = 0
-    else:
-        i = max(indices) + 1
-    arr3 = np.array([0+i,1+i,2+i,  3+i,1+i,2+i,  #床
-                    ], dtype=np.uint32)
-    indices = np.append(indices, arr3)  #三角形の頂点の番号
-
-    #bodyの頂点データを作成
-    for b in bodies:
-        #bodyの頂点データを作成
-        vertices, indices = draw_body(b, vertices, indices)
-    
-    #
-    glBindVertexArray(VAO)
-
-    # Vertex buffer
-    glBindBuffer(GL_ARRAY_BUFFER, VBO)
-    glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STATIC_DRAW)
-
-    # Element buffer
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.nbytes, indices, GL_STATIC_DRAW)
-
-    # Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(0))
-    glEnableVertexAttribArray(0)
-
-    # normal attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(3 * vertices.itemsize))
-    glEnableVertexAttribArray(1)
-
-    #
-    glBindBuffer(GL_ARRAY_BUFFER, 0)
-    glBindVertexArray(0)
-
-
-    # Start render 
-
-    glfw.poll_events()
     glClearColor(0.2, 0.3, 0.3, 1)
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO)  #FBOにバインド
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-    glUseProgram(shader_program)
+    #一つのオブジェクトごとに頂点データを転送して描画。深度マップを生成するためにFBOにレンダリング。
+    for vdl in vertices_data_list:
 
-    # Calculate rotation angle
-    time = glfw.get_time()
-    angle = 0
+        #オブジェクトごとの頂点リストから頂点データを取得
+        vertices, indices, body_index = vdl
+   
+        #
+        glBindVertexArray(VAO)
 
-    # Model matrix: rotate cube over time
-    model = np.identity(4, dtype=np.float32)
-    c = cos(angle)
-    s = sin(angle)
+        # Vertex buffer
+        glBindBuffer(GL_ARRAY_BUFFER, VBO)
+        glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STATIC_DRAW)
 
-    # Rotation around Y axis
-    model[0, 0] = c
-    model[0, 2] = s
-    model[2, 0] = -s
-    model[2, 2] = c
-    
-    #1回目のレンダリングの設定：ライト視点の深度マップを生成するためのレンダリング。#####################
-    # Define light's position and target
-    light_position = Vector3([0.0, 2.0*3.0, 3.0*3.0])
-    light_target = Vector3([0.0, 0.0, 0.0])
-    light_up = Vector3([0.0, 1.0, 0.0])
+        # Element buffer
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.nbytes, indices, GL_STATIC_DRAW)
 
-    # Create light's view matrix (lookAt matrix)
-    light_view = Matrix44.look_at(light_position, light_target, light_up)
+        # Position attribute
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(0))
+        glEnableVertexAttribArray(0)
 
-    # Define light's projection matrix (orthographic for directional light)
-    #light_projection = Matrix44.orthogonal_projection(-3.0, 3.0, -3.0, 3.0, -10.0, 20.0)
-    light_projection = Matrix44.perspective_projection(45.0, 800.0/600.0, 1, 20)
+        # normal attribute
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(3 * vertices.itemsize))
+        glEnableVertexAttribArray(1)
 
-    # Combine to form the lightSpaceMatrix
-    lightSpaceMatrix = light_projection * light_view
+        #
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        glBindVertexArray(0)
 
-    # Set uniform matrices
-    model_loc = glGetUniformLocation(shader_program, "model")
-    view_loc = glGetUniformLocation(shader_program, "view")
-    proj_loc = glGetUniformLocation(shader_program, "projection")
-    light_dir_loc = glGetUniformLocation(shader_program, "lightDir")
-    light_color_loc = glGetUniformLocation(shader_program, "lightColor")
-    object_color_loc = glGetUniformLocation(shader_program, "objectColor")
-    light_space_matrix_loc = glGetUniformLocation(shader_program, "lightSpaceMatrix")
-    depth_map_location = glGetUniformLocation(shader_program, "shadowMap")
+        #
+        glUseProgram(shader_program)
 
-    # uniformのセット
-    glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
-    glUniformMatrix4fv(view_loc, 1, GL_FALSE, light_view)
-    glUniformMatrix4fv(proj_loc, 1, GL_FALSE, light_projection)
-    glUniformMatrix4fv(light_space_matrix_loc, 1, GL_FALSE, lightSpaceMatrix)
-    glUniform3f(light_dir_loc, 0.0, -2.0, -3.0)  # ディレクショナルライトの方向例
-    glUniform3f(light_color_loc, 0.7, 0.7, 0.7)  # 白色光
-    glUniform3f(object_color_loc, 1.0, 0.5, 0.31) # オブジェクトの色
-    glUniform1i(depth_map_location, 0)  # テクスチャユニット0を指定 
+        # Model matrix: rotate box
+        model = np.identity(4, dtype=np.float32)
+        #boxの姿勢を取得して回転行列に代入
+        if body_index != None:
+            R = bodies[body_index].getRotation()
+            model[0,0] = R[0]
+            model[1,0] = R[1]
+            model[2,0] = R[2]
+            model[0,1] = R[3]
+            model[1,1] = R[4]
+            model[2,1] = R[5]
+            model[0,2] = R[6]
+            model[1,2] = R[7]
+            model[2,2] = R[8]
+        #boxの座標を取得して回転行列に代入
+        if body_index != None:
+            px,py,pz = bodies[body_index].getPosition()
+            model[3, 0] = px
+            model[3, 1] = py
+            model[3, 2] = pz
 
-    # Draw cube. 1回目のレンダリング：ライト視点の深度マップを生成するためのレンダリング。
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO)  #FBOにバインドする場所がここなら、FBOが機能する
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-    #glBindFramebuffer(GL_FRAMEBUFFER, FBO)  #FBOにバインドする場所がここだと、FBOが機能しない
-    glViewport(0, 0, 800, 600)
-    glBindVertexArray(VAO)
-    glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
+        #レンダリングの設定：ライト視点の深度マップを生成するためのレンダリング。
+        # Define light's position and target
+        light_position = Vector3([0.0, 2.0*3.0, 3.0*3.0])
+        light_target = Vector3([0.0, 0.0, 0.0])
+        light_up = Vector3([0.0, 1.0, 0.0])
+        # Create light's view matrix (lookAt matrix)
+        light_view = Matrix44.look_at(light_position, light_target, light_up)
+        # Define light's projection matrix
+        light_projection = Matrix44.perspective_projection(45.0, 800.0/600.0, 1, 20)
+        # Combine to form the lightSpaceMatrix
+        lightSpaceMatrix = light_projection * light_view
+
+        # Set uniform matrices
+        model_loc = glGetUniformLocation(shader_program, "model")
+        view_loc = glGetUniformLocation(shader_program, "view")
+        proj_loc = glGetUniformLocation(shader_program, "projection")
+        light_dir_loc = glGetUniformLocation(shader_program, "lightDir")
+        light_color_loc = glGetUniformLocation(shader_program, "lightColor")
+        object_color_loc = glGetUniformLocation(shader_program, "objectColor")
+        light_space_matrix_loc = glGetUniformLocation(shader_program, "lightSpaceMatrix")
+        depth_map_location = glGetUniformLocation(shader_program, "shadowMap")
+
+        # uniformのセット
+        glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
+        glUniformMatrix4fv(view_loc, 1, GL_FALSE, light_view)
+        glUniformMatrix4fv(proj_loc, 1, GL_FALSE, light_projection)
+        glUniformMatrix4fv(light_space_matrix_loc, 1, GL_FALSE, lightSpaceMatrix)
+        glUniform3f(light_dir_loc, 0.0, -2.0, -3.0)  # ディレクショナルライトの方向例
+        glUniform3f(light_color_loc, 0.7, 0.7, 0.7)  # 白色光
+        glUniform3f(object_color_loc, 1.0, 0.5, 0.31) # オブジェクトの色
+        glUniform1i(depth_map_location, 0)  # テクスチャユニット0を指定 
+
+        # Draw cube. 1回目のレンダリング：ライト視点の深度マップを生成するためのレンダリング。
+        glViewport(0, 0, 800, 600)
+        glBindVertexArray(VAO)
+        glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0)  #デフォルトフレームバッファにバインド
-
-    # デフォルトフレームバッフへの1回目のレンダリングをクリア
+    # デフォルトフレームバッフをクリア
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-    #2回目のレンダリングの設定#####################
-    # Define view position and target
-    view_position = Vector3([1.0, 4.0, 4.0])
-    view_target = Vector3([0.0, 0.0, 0.0])
-    view_up = Vector3([0.0, 1.0, 0.0])
+    #一つのオブジェクトごとに頂点データを転送して描画。シャドウマッピングで影をレンダリング。
+    for vdl in vertices_data_list:
 
-    # Create view matrix (lookAt matrix)
-    view = Matrix44.look_at(view_position, view_target, view_up)
+        #boxごとの頂点リストから頂点データを取得
+        vertices, indices, body_index = vdl
 
-    # uniformのセット
-    glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
+        #
+        glBindVertexArray(VAO)
 
-    # Draw cube. 2回目のレンダリング。影付きのレンダリング。
-    glViewport(0, 0, 800, 600)
-    glBindTexture(GL_TEXTURE_2D, depth_texture )# テクスチャ0（ライト視点の深度マップ）にバインド。depth_textureとFBOはアタッチされている。
-    glBindVertexArray(VAO)
-    glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
-    glBindTexture(GL_TEXTURE_2D, 0)  # Unbind texture
-    
+        # Vertex buffer
+        glBindBuffer(GL_ARRAY_BUFFER, VBO)
+        glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STATIC_DRAW)
+
+        # Element buffer
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.nbytes, indices, GL_STATIC_DRAW)
+
+        # Position attribute
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(0))
+        glEnableVertexAttribArray(0)
+
+        # normal attribute
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(3 * vertices.itemsize))
+        glEnableVertexAttribArray(1)
+
+        #
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        glBindVertexArray(0)
+
+        # Model matrix: rotate box
+        model = np.identity(4, dtype=np.float32)
+        #boxの姿勢を取得して回転行列に代入
+        if body_index != None:
+            R = bodies[body_index].getRotation()
+            model[0,0] = R[0]
+            model[1,0] = R[1]
+            model[2,0] = R[2]
+            model[0,1] = R[3]
+            model[1,1] = R[4]
+            model[2,1] = R[5]
+            model[0,2] = R[6]
+            model[1,2] = R[7]
+            model[2,2] = R[8]
+        #boxの座標を取得して回転行列に代入
+        if body_index != None:
+            px,py,pz = bodies[body_index].getPosition()
+            model[3, 0] = px
+            model[3, 1] = py
+            model[3, 2] = pz
+
+        #レンダリングの設定。
+        # Define view position and target
+        view_position = Vector3([1.0, 4.0, 4.0])
+        view_target = Vector3([0.0, 0.0, 0.0])
+        view_up = Vector3([0.0, 1.0, 0.0])
+
+        # Create view matrix (lookAt matrix)
+        view = Matrix44.look_at(view_position, view_target, view_up)
+
+        # uniformのセット
+        glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
+        glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
+
+        # Draw cube. シャドウマッピングで影有りのレンダリング。
+        glViewport(0, 0, 800, 600)
+        glBindTexture(GL_TEXTURE_2D, depth_texture )# テクスチャ0（ライト視点の深度マップ）にバインド。depth_textureとFBOはアタッチされている。
+        glBindVertexArray(VAO)
+        glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
+        glBindTexture(GL_TEXTURE_2D, 0)  # Unbind texture
+        
 
 def main():
     global counter, state, lasttime
@@ -601,11 +571,44 @@ def main():
     VBO = glGenBuffers(1)
     EBO = glGenBuffers(1)
 
+    #オブジェクトごとの頂点データリスト（シェーダー用のリスト）
+    vertices_data_list = [] #[ [vertices, indices, ode object number], ... ]
+
+    #床のverticesデータを作成
+                                # positions         # normals        
+    floor_vertices = np.array([ -3.0,  0.0,  -3.0,   0.0, 1.0,  0.0,  #床 0
+                                -3.0,  0.0,   3.0,   0.0, 1.0,  0.0,  #床 1
+                                 3.0,  0.0,  -3.0,   0.0, 1.0,  0.0,  #床 2
+                                 3.0,  0.0,   3.0,   0.0, 1.0,  0.0   #床 3
+                                ], dtype=np.float32)
+    #床のIndicesデータを作成
+    floor_indices = np.array([0,1,2,  3,1,2  #床
+                    ], dtype=np.uint32)
+    #オブジェクトごとの頂点データリストに床の頂点データを追加
+    vertices_data_list.append([floor_vertices, floor_indices, None])
+    #オブジェクトごとの頂点データリスト（シェーダー用のリスト）の要素数 = 床の数 = 1
+    init_obj_num = len(vertices_data_list)
+
     #物理演算とシェーダのループ部分
     while not glfw.window_should_close(window):
 
-        use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture)  #シェーダーで描画
+        #頂点データリスト（シェーダー用のリスト）にbody（ODEのオブジェクト）の頂点データを追加
+        for index, body in enumerate(bodies):
+            #「body（ODEのオブジェクト）の数」が、「オブジェクトごとの頂点データリスト（シェーダー用のリスト）の要素数-床の数」より多い時、
+            # 頂点データリストにbodyの頂点データを追加
+            if index + 1 > len(vertices_data_list) - init_obj_num:
+                #
+                vertices = np.array([], dtype=np.float32)
+                indices = np.array([], dtype=np.uint32)
+                #body（ODEのオブジェクト）の頂点データ（シェーダー用）を作成
+                vertices, indices = draw_body(body, vertices, indices)
+                #頂点データリスト（シェーダー用のリスト）にbody（ODEのオブジェクト）の頂点データを追加
+                vertices_data_list.append([vertices, indices, index])
 
+        #シェーダーで描画
+        use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture, vertices_data_list)  
+
+        #物理演算
         t = dt - (time.time() - lasttime)
         if (t > 0):
             time.sleep(t)
@@ -649,7 +652,6 @@ def main():
         glfw.swap_buffers(window)
         glfw.poll_events()
 
-
     # Cleanup
     glDeleteTextures([depth_texture])
     glDeleteVertexArrays(1, [VAO])
@@ -658,5 +660,7 @@ def main():
     glDeleteBuffers(1, [FBO])
     glfw.terminate()
 
+
 if __name__ == "__main__":
+
     main()

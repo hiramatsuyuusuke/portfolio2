@@ -39,7 +39,6 @@ in vec3 Normal;
 uniform vec3 lightDir;    // 光源の方向（正規化済み）
 uniform vec3 lightColor;
 uniform vec3 objectColor;
-uniform vec3 viewPos;
 
 void main()
 {
