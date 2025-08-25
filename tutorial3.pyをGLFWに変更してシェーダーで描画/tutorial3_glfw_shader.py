@@ -10,6 +10,42 @@ import numpy as np
 import ode
 
 
+class Shader:
+    #シェーダプログラム作成
+    def __init__(self, vertex_shader_source, fragment_shader_source):
+        self.program = glCreateProgram()
+        vertex_shader = self.compile_shader(vertex_shader_source, GL_VERTEX_SHADER)
+        fragment_shader = self.compile_shader(fragment_shader_source, GL_FRAGMENT_SHADER)
+        glAttachShader(self.program, vertex_shader)
+        glAttachShader(self.program, fragment_shader)
+        glLinkProgram(self.program)
+        # Check linking
+        if not glGetProgramiv(self.program, GL_LINK_STATUS):
+            error = glGetProgramInfoLog(self.program).decode()
+            raise RuntimeError(f"Program linking failed: {error}")
+        glDeleteShader(vertex_shader)
+        glDeleteShader(fragment_shader)
+
+    #シェーダコンパイル
+    def compile_shader(self, source, shader_type):
+        shader = glCreateShader(shader_type)
+        glShaderSource(shader, source)
+        glCompileShader(shader)
+        # Check compilation
+        if not glGetShaderiv(shader, GL_COMPILE_STATUS):
+            error = glGetShaderInfoLog(shader).decode()
+            raise RuntimeError(f"Shader compile failed: {error}")
+        return shader
+
+    def use(self):
+        glUseProgram(self.program)
+
+    def __del__(self):
+        try:
+            glDeleteProgram(self.program)
+        except Exception:
+            pass
+
 # Vertex Shader
 vertex_shader_source = """
 #version 330 core
@@ -61,33 +97,6 @@ void main()
     gl_FragColor = vec4(result, 1.0);
 }
 """
-
-#シェーダコンパイル
-def compile_shader(source, shader_type):
-    shader = glCreateShader(shader_type)
-    glShaderSource(shader, source)
-    glCompileShader(shader)
-    # Check compilation
-    if not glGetShaderiv(shader, GL_COMPILE_STATUS):
-        error = glGetShaderInfoLog(shader).decode()
-        raise RuntimeError(f"Shader compile failed: {error}")
-    return shader
-
-#シェーダプログラム作成
-def create_shader_program():
-    vertex_shader = compile_shader(vertex_shader_source, GL_VERTEX_SHADER)
-    fragment_shader = compile_shader(fragment_shader_source, GL_FRAGMENT_SHADER)
-    program = glCreateProgram()
-    glAttachShader(program, vertex_shader)
-    glAttachShader(program, fragment_shader)
-    glLinkProgram(program)
-    # Check linking
-    if not glGetProgramiv(program, GL_LINK_STATUS):
-        error = glGetProgramInfoLog(program).decode()
-        raise RuntimeError(f"Program linking failed: {error}")
-    glDeleteShader(vertex_shader)
-    glDeleteShader(fragment_shader)
-    return program
 
 # シェーダー用の頂点データと法線データを作成
 def draw_body(body, vertices, indices):
@@ -290,7 +299,10 @@ def process_input(window):
         glfw.set_window_should_close(window, True)
 
 #シェーダーで描画
-def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO, vertices_data_list):
+def use_shader_in_tutorial3(window, shader, VAO, VBO, EBO, vertices_data_list):
+
+    # glUseProgram
+    shader.use() 
 
     glClearColor(0.2, 0.3, 0.3, 1)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -317,50 +329,11 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO, vertices_data
     view[3, 1] = -1.0  # Move on y axis
     view[3, 2] = -4.0  # Move on z axis
 
-    # Start render 
-    glUseProgram(shader_program)
-
-    # Set uniform matrices
-    model_loc = glGetUniformLocation(shader_program, "model")
-    view_loc = glGetUniformLocation(shader_program, "view")
-    proj_loc = glGetUniformLocation(shader_program, "projection")
-    light_dir_loc = glGetUniformLocation(shader_program, "lightDir")
-    light_color_loc = glGetUniformLocation(shader_program, "lightColor")
-    object_color_loc = glGetUniformLocation(shader_program, "objectColor")
-
-    # uniformのセット
-    glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
-    glUniformMatrix4fv(proj_loc, 1, GL_FALSE, projection)
-    glUniform3f(light_dir_loc, 0.0, -3.0, -1.0)  # ディレクショナルライトの方向例
-    glUniform3f(light_color_loc, 0.7, 0.7, 0.7)  # 白色光
-    glUniform3f(object_color_loc, 1.0, 0.5, 0.31) # オブジェクトの色
-
     #boxの頂点データを一つのboxごとに転送して描画
     for vdl in vertices_data_list:
 
         #boxごとの頂点リストから頂点データを取得
         vertices, indices, body_index = vdl
-        #
-        glBindVertexArray(VAO)
-
-        # Vertex buffer
-        glBindBuffer(GL_ARRAY_BUFFER, VBO)
-        glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STATIC_DRAW)
-
-        # Element buffer
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.nbytes, indices, GL_STATIC_DRAW)
-
-        # Position attribute
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(0))
-        glEnableVertexAttribArray(0)
-
-        # normal attribute
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(3 * vertices.itemsize))
-        glEnableVertexAttribArray(1)
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0)
-        glBindVertexArray(0)
 
         # Model matrix: rotate box
         model = np.identity(4, dtype=np.float32)
@@ -389,8 +362,43 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO, vertices_data
         model[3, 1] = py
         model[3, 2] = pz
 
+        #
+        glBindVertexArray(VAO)
+
+        # Vertex buffer
+        glBindBuffer(GL_ARRAY_BUFFER, VBO)
+        glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STATIC_DRAW)
+
+        # Element buffer
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.nbytes, indices, GL_STATIC_DRAW)
+
+        # Position attribute
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(0))
+        glEnableVertexAttribArray(0)
+
+        # normal attribute
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(3 * vertices.itemsize))
+        glEnableVertexAttribArray(1)
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        glBindVertexArray(0)
+
+        # Set uniform matrices
+        model_loc = glGetUniformLocation(shader.program, "model")
+        view_loc = glGetUniformLocation(shader.program, "view")
+        proj_loc = glGetUniformLocation(shader.program, "projection")
+        light_dir_loc = glGetUniformLocation(shader.program, "lightDir")
+        light_color_loc = glGetUniformLocation(shader.program, "lightColor")
+        object_color_loc = glGetUniformLocation(shader.program, "objectColor")
+
         # uniformのセット
         glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
+        glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
+        glUniformMatrix4fv(proj_loc, 1, GL_FALSE, projection)
+        glUniform3f(light_dir_loc, 0.0, -3.0, -1.0)  # ディレクショナルライトの方向例
+        glUniform3f(light_color_loc, 0.7, 0.7, 0.7)  # 白色光
+        glUniform3f(object_color_loc, 1.0, 0.5, 0.31) # オブジェクトの色
 
         # Draw cube
         glBindVertexArray(VAO)
@@ -416,8 +424,8 @@ def main():
     # Enable depth test for 3D rendering
     glEnable(GL_DEPTH_TEST)
 
-    #
-    shader_program = create_shader_program()
+    #シェーダプログラム作成とコンパイル
+    shader = Shader(vertex_shader_source, fragment_shader_source)
 
     # Generate buffers and arrays
     VAO = glGenVertexArrays(1)
@@ -445,7 +453,7 @@ def main():
                 vertices_data_list.append([vertices, indices, index])
 
         #シェーダーで描画
-        use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO, vertices_data_list)
+        use_shader_in_tutorial3(window, shader, VAO, VBO, EBO, vertices_data_list)
         
         #物理演算
         t = dt - (time.time() - lasttime)
