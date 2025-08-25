@@ -12,6 +12,32 @@ from pyrr import Matrix44, Vector3
 import ode
 
 
+#深度マップ生成用シェーダー
+# Vertex Shader
+depth_vertex_shader_source = """
+#version 330 core
+
+layout(location = 0) in vec3 position;
+
+uniform mat4 lightSpaceMatrix;
+uniform mat4 model;
+
+void main()
+{
+    model;  //ここで一回modelを実行しないと深度マップが正常に機能しない。理由は不明。
+    gl_Position = lightSpaceMatrix * model * vec4(position, 1.0);
+}
+"""
+# Fragment Shader
+depth_fragment_shader_source = """
+#version 330 core
+
+void main() {
+    // 深度値のみを出力
+}
+"""
+
+#シーン描画用シェーダー
 # Vertex Shader
 vertex_shader_source = """
 #version 330 core
@@ -37,7 +63,6 @@ void main()
     gl_Position = projection * view * model * vec4(position, 1.0);
 }
 """
-
 # Fragment Shader
 fragment_shader_source = """
 #version 330 core
@@ -118,10 +143,26 @@ def compile_shader(source, shader_type):
         raise RuntimeError(f"Shader compile failed: {error}")
     return shader
 
+#depthシェーダプログラム作成
+def create_depth_shader_program():
+    depth_vertex_shader = compile_shader(depth_vertex_shader_source, GL_VERTEX_SHADER)
+    depth_fragment_shader = compile_shader(depth_fragment_shader_source, GL_FRAGMENT_SHADER)
+    depth_program = glCreateProgram()    
+    glAttachShader(depth_program, depth_vertex_shader)
+    glAttachShader(depth_program, depth_fragment_shader)
+    glLinkProgram(depth_program)
+    # Check linking
+    if not glGetProgramiv(depth_program, GL_LINK_STATUS):
+        error = glGetProgramInfoLog(depth_program).decode()
+        raise RuntimeError(f"Program linking failed: {error}")
+    glDeleteShader(depth_vertex_shader)
+    glDeleteShader(depth_fragment_shader)
+    return depth_program
+
 #シェーダプログラム作成
 def create_shader_program():
     vertex_shader = compile_shader(vertex_shader_source, GL_VERTEX_SHADER)
-    fragment_shader = compile_shader(fragment_shader_source, GL_FRAGMENT_SHADER)
+    fragment_shader = compile_shader(fragment_shader_source, GL_FRAGMENT_SHADER) 
     program = glCreateProgram()
     glAttachShader(program, vertex_shader)
     glAttachShader(program, fragment_shader)
@@ -352,7 +393,10 @@ lasttime = time.time()
 
 
 #シェーダーで描画
-def use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture, vertices_data_list):
+def use_shader_in_tutorial3(shader_program, depth_shader_program, VAO, VBO, EBO, FBO, depth_texture, vertices_data_list):
+
+    #
+    glUseProgram(depth_shader_program)
 
     glClearColor(0.2, 0.3, 0.3, 1)
     glBindFramebuffer(GL_FRAMEBUFFER, FBO)  #FBOにバインド
@@ -363,32 +407,21 @@ def use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture, v
 
         #オブジェクトごとの頂点リストから頂点データを取得
         vertices, indices, body_index = vdl
-   
+
         #
         glBindVertexArray(VAO)
-
         # Vertex buffer
         glBindBuffer(GL_ARRAY_BUFFER, VBO)
         glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STATIC_DRAW)
-
         # Element buffer
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.nbytes, indices, GL_STATIC_DRAW)
-
         # Position attribute
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(0))
         glEnableVertexAttribArray(0)
-
-        # normal attribute
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(3 * vertices.itemsize))
-        glEnableVertexAttribArray(1)
-
         #
         glBindBuffer(GL_ARRAY_BUFFER, 0)
         glBindVertexArray(0)
-
-        #
-        glUseProgram(shader_program)
 
         # Model matrix: rotate box
         model = np.identity(4, dtype=np.float32)
@@ -425,34 +458,25 @@ def use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture, v
 
         # Set uniform matrices
         model_loc = glGetUniformLocation(shader_program, "model")
-        view_loc = glGetUniformLocation(shader_program, "view")
-        proj_loc = glGetUniformLocation(shader_program, "projection")
-        light_dir_loc = glGetUniformLocation(shader_program, "lightDir")
-        light_color_loc = glGetUniformLocation(shader_program, "lightColor")
-        object_color_loc = glGetUniformLocation(shader_program, "objectColor")
         light_space_matrix_loc = glGetUniformLocation(shader_program, "lightSpaceMatrix")
-        depth_map_location = glGetUniformLocation(shader_program, "shadowMap")
 
         # uniformのセット
         glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
-        glUniformMatrix4fv(view_loc, 1, GL_FALSE, light_view)
-        glUniformMatrix4fv(proj_loc, 1, GL_FALSE, light_projection)
         glUniformMatrix4fv(light_space_matrix_loc, 1, GL_FALSE, lightSpaceMatrix)
-        glUniform3f(light_dir_loc, 0.0, -2.0, -3.0)  # ディレクショナルライトの方向例
-        glUniform3f(light_color_loc, 0.7, 0.7, 0.7)  # 白色光
-        glUniform3f(object_color_loc, 1.0, 0.5, 0.31) # オブジェクトの色
-        glUniform1i(depth_map_location, 0)  # テクスチャユニット0を指定 
 
         # Draw cube. 1回目のレンダリング：ライト視点の深度マップを生成するためのレンダリング。
         glViewport(0, 0, 800, 600)
         glBindVertexArray(VAO)
         glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
 
+    #
+    glUseProgram(shader_program)
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0)  #デフォルトフレームバッファにバインド
     # デフォルトフレームバッフをクリア
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-    #一つのオブジェクトごとに頂点データを転送して描画。シャドウマッピングで影をレンダリング。
+    #一つのオブジェクトごとに頂点データを転送して描画。シャドウマッピングで影のあるシーンをレンダリング。
     for vdl in vertices_data_list:
 
         #boxごとの頂点リストから頂点データを取得
@@ -460,23 +484,18 @@ def use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture, v
 
         #
         glBindVertexArray(VAO)
-
         # Vertex buffer
         glBindBuffer(GL_ARRAY_BUFFER, VBO)
         glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STATIC_DRAW)
-
         # Element buffer
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.nbytes, indices, GL_STATIC_DRAW)
-
         # Position attribute
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(0))
         glEnableVertexAttribArray(0)
-
         # normal attribute
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * vertices.itemsize, ctypes.c_void_p(3 * vertices.itemsize))
         glEnableVertexAttribArray(1)
-
         #
         glBindBuffer(GL_ARRAY_BUFFER, 0)
         glBindVertexArray(0)
@@ -502,20 +521,35 @@ def use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture, v
             model[3, 1] = py
             model[3, 2] = pz
 
-        #レンダリングの設定。
+        #レンダリングの設定。シーンのレンダリング。
         # Define view position and target
         view_position = Vector3([1.0, 4.0, 4.0])
         view_target = Vector3([0.0, 0.0, 0.0])
         view_up = Vector3([0.0, 1.0, 0.0])
-
         # Create view matrix (lookAt matrix)
         view = Matrix44.look_at(view_position, view_target, view_up)
+
+        # Set uniform matrices
+        model_loc = glGetUniformLocation(shader_program, "model")
+        view_loc = glGetUniformLocation(shader_program, "view")
+        proj_loc = glGetUniformLocation(shader_program, "projection")
+        light_dir_loc = glGetUniformLocation(shader_program, "lightDir")
+        light_color_loc = glGetUniformLocation(shader_program, "lightColor")
+        object_color_loc = glGetUniformLocation(shader_program, "objectColor")
+        light_space_matrix_loc = glGetUniformLocation(shader_program, "lightSpaceMatrix")
+        depth_map_location = glGetUniformLocation(shader_program, "shadowMap")
 
         # uniformのセット
         glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
         glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
+        glUniformMatrix4fv(proj_loc, 1, GL_FALSE, light_projection)
+        glUniformMatrix4fv(light_space_matrix_loc, 1, GL_FALSE, lightSpaceMatrix)
+        glUniform3f(light_dir_loc, 0.0, -2.0, -3.0)  # ディレクショナルライトの方向例
+        glUniform3f(light_color_loc, 0.7, 0.7, 0.7)  # 白色光
+        glUniform3f(object_color_loc, 1.0, 0.5, 0.31) # オブジェクトの色
+        glUniform1i(depth_map_location, 0)  # テクスチャユニット0を指定 
 
-        # Draw cube. シャドウマッピングで影有りのレンダリング。
+        # Draw cube. シャドウマッピングで影のあるシーンをレンダリング。
         glViewport(0, 0, 800, 600)
         glBindTexture(GL_TEXTURE_2D, depth_texture )# テクスチャ0（ライト視点の深度マップ）にバインド。depth_textureとFBOはアタッチされている。
         glBindVertexArray(VAO)
@@ -560,10 +594,13 @@ def main():
     glBindFramebuffer(GL_FRAMEBUFFER, FBO)  
     #深度テクスチャ分の領域をFBOフレームバッファにアタッチ
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_texture, 0)
+    glDrawBuffer(GL_NONE)
+    glReadBuffer(GL_NONE)
     #デフォルトフレームバッファ（画面のバッファ）にバインド
     glBindFramebuffer(GL_FRAMEBUFFER, 0) 
     
     #
+    depth_shader_program = create_depth_shader_program()
     shader_program = create_shader_program()
 
     # Generate buffers and arrays
@@ -606,7 +643,7 @@ def main():
                 vertices_data_list.append([vertices, indices, index])
 
         #シェーダーで描画
-        use_shader_in_tutorial3(shader_program, VAO, VBO, EBO, FBO, depth_texture, vertices_data_list)  
+        use_shader_in_tutorial3(shader_program, depth_shader_program, VAO, VBO, EBO, FBO, depth_texture, vertices_data_list)  
 
         #物理演算
         t = dt - (time.time() - lasttime)
