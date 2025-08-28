@@ -36,10 +36,28 @@ class Shader:
             error = glGetShaderInfoLog(shader).decode()
             raise RuntimeError(f"Shader compile failed: {error}")
         return shader
-
+    
+    # シェーダープログラムを使用
     def use(self):
         glUseProgram(self.program)
 
+    # Uniform変数に3次元ベクトルを送信
+    def set_uniform3f(self, name, x, y, z):
+        # glUniform3fで3Dベクトルを送信
+        location = glGetUniformLocation(self.program, name)
+        if location == -1:
+            raise ValueError(f"Uniform '{name}' not found in shader.")
+        glUniform3f(location, x, y, z)
+
+    # Uniform変数に4×4マトリックスを送信
+    def set_uniform_matrix4fv(self, name, matrix):
+        # glUniformMatrix4fvで4x4行列を送信
+        location = glGetUniformLocation(self.program, name)
+        if location == -1:
+            raise ValueError(f"Uniform '{name}' not found in shader.")
+        glUniformMatrix4fv(location, 1, GL_FALSE, np.array(matrix, dtype=np.float32))
+    
+    # シェーダープログラムの削除
     def __del__(self):
         try:
             glDeleteProgram(self.program)
@@ -384,21 +402,13 @@ def use_shader_in_tutorial3(window, shader, VAO, VBO, EBO, vertices_data_list):
         glBindBuffer(GL_ARRAY_BUFFER, 0)
         glBindVertexArray(0)
 
-        # Set uniform matrices
-        model_loc = glGetUniformLocation(shader.program, "model")
-        view_loc = glGetUniformLocation(shader.program, "view")
-        proj_loc = glGetUniformLocation(shader.program, "projection")
-        light_dir_loc = glGetUniformLocation(shader.program, "lightDir")
-        light_color_loc = glGetUniformLocation(shader.program, "lightColor")
-        object_color_loc = glGetUniformLocation(shader.program, "objectColor")
-
-        # uniformのセット
-        glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
-        glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
-        glUniformMatrix4fv(proj_loc, 1, GL_FALSE, projection)
-        glUniform3f(light_dir_loc, 0.0, -3.0, -1.0)  # ディレクショナルライトの方向例
-        glUniform3f(light_color_loc, 0.7, 0.7, 0.7)  # 白色光
-        glUniform3f(object_color_loc, 1.0, 0.5, 0.31) # オブジェクトの色
+        # Uniform変数に値を送信
+        shader.set_uniform_matrix4fv("model", model)
+        shader.set_uniform_matrix4fv("view", view)
+        shader.set_uniform_matrix4fv("projection", projection)
+        shader.set_uniform3f("lightDir", 0.0, -3.0, -1.0)  # ディレクショナルライトの方向例
+        shader.set_uniform3f("lightColor", 0.7, 0.7, 0.7)  # 白色光
+        shader.set_uniform3f("objectColor", 1.0, 0.5, 0.31) # オブジェクトの色
 
         # Draw cube
         glBindVertexArray(VAO)
