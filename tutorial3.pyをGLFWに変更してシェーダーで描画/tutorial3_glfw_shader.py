@@ -356,29 +356,24 @@ def use_shader_in_tutorial3(window, shader, VAO, VBO, EBO, vertices_data_list):
         # Model matrix: rotate box
         model = np.identity(4, dtype=np.float32)
 
-        #boxの姿勢を取得して回転行列に代入
+        #
         if body_index != None:
+            #boxの姿勢を取得して回転行列に代入
             R = bodies[body_index].getRotation()
-        else:
-            R = (0,0,0,0,0,0,0,0,0)
-        model[0,0] = R[0]
-        model[1,0] = R[1]
-        model[2,0] = R[2]
-        model[0,1] = R[3]
-        model[1,1] = R[4]
-        model[2,1] = R[5]
-        model[0,2] = R[6]
-        model[1,2] = R[7]
-        model[2,2] = R[8]
-
-        #boxの座標を取得して回転行列に代入
-        if body_index != None:
+            model[0,0] = R[0]
+            model[1,0] = R[1]
+            model[2,0] = R[2]
+            model[0,1] = R[3]
+            model[1,1] = R[4]
+            model[2,1] = R[5]
+            model[0,2] = R[6]
+            model[1,2] = R[7]
+            model[2,2] = R[8]
+            #boxの座標を取得して回転行列に代入
             px,py,pz = bodies[body_index].getPosition()
-        else:
-            px,py,pz = 0,0,0
-        model[3, 0] = px
-        model[3, 1] = py
-        model[3, 2] = pz
+            model[3, 0] = px
+            model[3, 1] = py
+            model[3, 2] = pz
 
         #
         glBindVertexArray(VAO)

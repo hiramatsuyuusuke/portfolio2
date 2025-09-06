@@ -87,7 +87,7 @@ uniform mat4 model;
 
 void main()
 {
-    model;  //ここで一回modelを実行しないと深度マップが正常に機能しない。理由は不明。
+    model;  //ここで一回modelを実行しないと深度マップが正常に機能しない。理由は不明。正常に機能することもある。
     gl_Position = lightSpaceMatrix * model * vec4(position, 1.0);
 }
 """
@@ -446,8 +446,9 @@ def use_shader_in_tutorial3(shader_program, depth_shader_program, VAO, VBO, EBO,
 
         # Model matrix: rotate box
         model = np.identity(4, dtype=np.float32)
-        #boxの姿勢を取得して回転行列に代入
+        #
         if body_index != None:
+            #boxの姿勢を取得して回転行列に代入
             R = bodies[body_index].getRotation()
             model[0][0] = R[0]
             model[1][0] = R[1]
@@ -458,8 +459,7 @@ def use_shader_in_tutorial3(shader_program, depth_shader_program, VAO, VBO, EBO,
             model[0][2] = R[6]
             model[1][2] = R[7]
             model[2][2] = R[8]
-        #boxの座標を取得して回転行列に代入
-        if body_index != None:
+            #boxの座標を取得して回転行列に代入
             px,py,pz = bodies[body_index].getPosition()
             model[3][ 0] = px
             model[3][ 1] = py
@@ -519,8 +519,9 @@ def use_shader_in_tutorial3(shader_program, depth_shader_program, VAO, VBO, EBO,
 
         # Model matrix: rotate box
         model = np.identity(4, dtype=np.float32)
-        #boxの姿勢を取得して回転行列に代入
+        #
         if body_index != None:
+            #boxの姿勢を取得して回転行列に代入
             R = bodies[body_index].getRotation()
             model[0][0] = R[0]
             model[1][0] = R[1]
@@ -531,8 +532,7 @@ def use_shader_in_tutorial3(shader_program, depth_shader_program, VAO, VBO, EBO,
             model[0][2] = R[6]
             model[1][2] = R[7]
             model[2][2] = R[8]
-        #boxの座標を取得して回転行列に代入
-        if body_index != None:
+            #boxの座標を取得して回転行列に代入
             px,py,pz = bodies[body_index].getPosition()
             model[3][ 0] = px
             model[3][ 1] = py

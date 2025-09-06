@@ -28,7 +28,7 @@ layout(location = 3) in float color_opacity;
 layout(location = 4) in vec2 vertexUV;
 layout(location = 5) in float vertexUV_flag;
 
-uniform mat4 model;
+uniform mat4 model; //オブジェクトごとの回転行列
 uniform mat4 view;
 uniform mat4 projection;
 
@@ -198,66 +198,18 @@ def draw_body(body, vertices, indices, color_rgba):
             elif i < 24:
                 n.append(glm.vec3(  1,  0,  0))  # right face   # 20,21,22,23
 
-        # glm用（後でデータを入れ替える）の回転行列を作成
-        rotation_matrix = glm.rotate(glm.mat4(1.0), glm.radians(0), glm.vec3(0, 0, 1))
-
-        #姿勢データを取得
-        R = body.getRotation()
-        #rot = np.array([[R[0], R[1], R[2], 0.0],
-        #                [R[3], R[4], R[5], 0.0],
-        #                [R[6], R[7], R[8], 0.0],
-        #                [   0,    0,    0, 1.0]])
-        
-        # glm用の回転行列に姿勢データを入れる
-        rotation_matrix[0,0] = R[0]
-        rotation_matrix[1,0] = R[1]
-        rotation_matrix[2,0] = R[2]
-
-        rotation_matrix[0,1] = R[3]
-        rotation_matrix[1,1] = R[4]
-        rotation_matrix[2,1] = R[5]
-
-        rotation_matrix[0,2] = R[6]
-        rotation_matrix[1,2] = R[7]
-        rotation_matrix[2,2] = R[8]
-
-        # 回転行列からクォータニオンを生成
-        quaternion = glm.quat_cast(rotation_matrix)
-
-        #頂点座標の回転変換
-        vpx = []
-        vpy = []
-        vpz = []
-        for i in range(len(v)):
-            rotated_vector = quaternion * v[i]    # 頂点座標を回転
-            x,y,z = rotated_vector #回転後の頂点座標
-            vpx.append(x)
-            vpy.append(y)
-            vpz.append(z)
-
-        #頂点の法線の回転変換
-        nx = []
-        ny = []
-        nz = []    
-        for i in range(len(v)):
-            rotated_vector = quaternion * n[i]    # 頂点の法線を回転
-            x,y,z = glm.normalize(rotated_vector)
-            nx.append(x)
-            ny.append(y)
-            nz.append(z)
-            
         # Cube vertices and normals (position XYZ + normals)
-        px,py,pz = body.getPosition()   #boxの座標を取得
         arr1 = np.array([], dtype=np.float32)
-        for i in range(len(v)):                                  
-            arr2 = np.array([   vpx[i]+px, vpy[i]+py, vpz[i]+pz,        # positions
-                                nx[i], ny[i], nz[i],                    # normals
+        for i in range(len(v)):
+                                     
+            arr2 = np.array([   v[i][0], v[i][1], v[i][2],              # vertex positions 
+                                n[i][0], n[i][1], n[i][2],              # normals
                                 color_r, color_g, color_b, color_a,     # color
                                 1.0, 1.0, 0.0],                         #uv and flag
                                 dtype=np.float32)
             arr1 = np.append(arr1, arr2)
         vertices_result = np.append(vertices, arr1)
-        
+     
         # Indices defining the 12 triangles composing the cube
         if len(indices) == 0:
             i = 0
@@ -272,7 +224,7 @@ def draw_body(body, vertices, indices, color_rgba):
             20+i,21+i,22+i, 22+i,23+i,20+i   # right face
         ], dtype=np.uint32)
         indices_result = np.append(indices, arr3)
-
+        
     ##################################################################
     #cylinderの頂点データを作成。シリンダーオブジェクトの座標は重心座標。
     if body.shape == "cylinder":
@@ -312,68 +264,25 @@ def draw_body(body, vertices, indices, color_rgba):
         n.append( glm.vec3(0, 0, 1) ) #上天板の中心
         n.append( glm.vec3(0, 0, -1) ) #下天板の中心
 
-        # glm用（後でデータを入れ替える）の回転行列を作成
-        rotation_matrix = glm.rotate(glm.mat4(1.0), glm.radians(0), glm.vec3(0, 0, 1))
-
-        #姿勢データを取得
-        R = body.getRotation()
-        #rot = np.array([[R[0], R[1], R[2], 0.0],
-        #                [R[3], R[4], R[5], 0.0],
-        #                [R[6], R[7], R[8], 0.0],
-        #                [   0,    0,    0, 1.0]])
-        
-        # glm用の回転行列に姿勢データを入れる
-        rotation_matrix[0,0] = R[0]
-        rotation_matrix[1,0] = R[1]
-        rotation_matrix[2,0] = R[2]
-
-        rotation_matrix[0,1] = R[3]
-        rotation_matrix[1,1] = R[4]
-        rotation_matrix[2,1] = R[5]
-
-        rotation_matrix[0,2] = R[6]
-        rotation_matrix[1,2] = R[7]
-        rotation_matrix[2,2] = R[8]
-
-        # 回転行列からクォータニオンを生成
-        quaternion = glm.quat_cast(rotation_matrix)
-
-        #頂点座標の回転変換
-        vpx = []
-        vpy = []
-        vpz = []
-        for i in range(len(v)): # 
-            rotated_vector = quaternion * v[i]    # 頂点座標を回転
-            x,y,z = rotated_vector #回転後の頂点座標
-            vpx.append(x)
-            vpy.append(y)
-            vpz.append(z)
-
-        #頂点の法線の回転変換
-        nx = []
-        ny = []
-        nz = []    
-        for i in range(len(v)): #
-            rotated_vector = quaternion * n[i]    # 頂点の法線を回転
-            x,y,z = glm.normalize(rotated_vector)
-            nx.append(x)
-            ny.append(y)
-            nz.append(z)
-            
         # cylinder vertices and normals (position XYZ + normals)
-        px,py,pz = body.getPosition()   #cylinderの座標を取得
         arr1 = np.array([], dtype=np.float32)
-        for i in range(len(v)): # 
-            arr2 = np.array([   vpx[i]+px, vpy[i]+py, vpz[i]+pz,        # positions
-                                nx[i], ny[i], nz[i],                    # normals
+        for i in range(len(v)):
+                                     
+            arr2 = np.array([   v[i][0], v[i][1], v[i][2],              # vertex positions 
+                                n[i][0], n[i][1], n[i][2],              # normals
                                 color_r, color_g, color_b, color_a,     # color
                                 1.0, 1.0, 0.0],                         #uv and flag
                                 dtype=np.float32)
             arr1 = np.append(arr1, arr2)
         vertices_result = np.append(vertices, arr1)
-        
+
         # Indices defining the triangles composing the cylinder
-        i_start = max(indices) + 1  #天板用のindicesを記録しておく
+        #天板用のindicesを記録しておく
+        if len(indices) == 0:
+            i_start = 0
+        else:
+            i_start = max(indices) + 1
+
         #cylinder側面のindices
         for hn in range(height_num):    #高さ方向
             #indicesの続きの値を取得
@@ -815,6 +724,8 @@ for index, b in enumerate(bodies):
 #シェーダーで描画
 def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
 
+    vertices_data_list = []
+
     vertices = np.array([], dtype=np.float32)
     indices = np.array([], dtype=np.uint32)
 
@@ -859,188 +770,214 @@ def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
                      16+i,17+i,18+i,  19+i,17+i,18+i  #壁手前    
                      ], dtype=np.uint32)
     indices = np.append(indices, arr3)
-
-    #家具の頂点データを作成
-    for index, b in enumerate(bodies):
-        #bodyの頂点データを作成
-        vertices, indices = draw_body(b, vertices, indices, init_object[index][3])  # init_object[index][3]は、colorのデータ
+    vertices_data_list.append(["floor and wall", vertices, indices, None])
 
     #ロボットの頂点データを作成
     for index, b in enumerate(bodies_robo):
         if index == 3:#注視点用boxを描画しない
             pass
         else:
+            vertices = np.array([], dtype=np.float32)
+            indices = np.array([], dtype=np.uint32)            
             #bodyの頂点データを作成
             vertices, indices = draw_body(b, vertices, indices, init_object_robo[index][3])  # init_object[index][3]は、colorのデータ
 
+            vertices_data_list.append(["robo", vertices, indices, index])
 
-    glBindVertexArray(VAO)
+    #家具の頂点データを作成
+    for index, b in enumerate(bodies):
+        vertices = np.array([], dtype=np.float32)
+        indices = np.array([], dtype=np.uint32)
+        #bodyの頂点データを作成
+        vertices, indices = draw_body(b, vertices, indices, init_object[index][3])  # init_object[index][3]は、colorのデータ
 
-    # Vertex buffer
-    glBindBuffer(GL_ARRAY_BUFFER, VBO)
-    glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STATIC_DRAW)
+        vertices_data_list.append(["furniture", vertices, indices, index])
+  
+    #オブジェクトの頂点データを一つのオブジェクトごとに転送して描画
+    for vdl in vertices_data_list:
 
-    # Element buffer
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.nbytes, indices, GL_STATIC_DRAW)
-
-    # Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(0))
-    glEnableVertexAttribArray(0)
-
-    # normal attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(3 * vertices.itemsize))
-    glEnableVertexAttribArray(1)
-
-    # color attribute
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(6 * vertices.itemsize))
-    glEnableVertexAttribArray(2)
-
-    # color opacity attribute
-    glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(9 * vertices.itemsize))
-    glEnableVertexAttribArray(3)
-
-    # uv attribute
-    glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(10 * vertices.itemsize))
-    glEnableVertexAttribArray(4)
-
-    # uv flag attribute
-    glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(12 * vertices.itemsize))
-    glEnableVertexAttribArray(5)
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0)
-    glBindVertexArray(0)
-
-    # Projection matrix (perspective)
-    projection = np.identity(4, dtype=np.float32)
-
-    fov = 60
-    aspect_ratio = 320 / 320
-    near = 0.5
-    far = 30.0
-
-    f = 1.0 / tan(radians(fov) / 2)
-    projection[0, 0] = f / aspect_ratio
-    projection[1, 1] = f
-    projection[2, 2] = (far + near) / (near - far)
-    projection[2, 3] = (2 * far * near) / (near - far)
-    projection[3, 2] = -0.5
-    projection[3, 3] = 0
+        name, vertices, indices, body_index = vdl
         
-    # Start render 
-    glfw.poll_events()
+        glBindVertexArray(VAO)
 
-    glUseProgram(shader_program)
+        # Vertex buffer
+        glBindBuffer(GL_ARRAY_BUFFER, VBO)
+        glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STATIC_DRAW)
 
-    glUniform1i(glGetUniformLocation(shader_program, "texture0"), 0) # GL_TEXTURE0を渡す
-    glUniform1i(glGetUniformLocation(shader_program, "texture1"), 1) # GL_TEXTURE1を渡す
+        # Element buffer
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.nbytes, indices, GL_STATIC_DRAW)
 
-    # Calculate rotation angle
-    time = glfw.get_time()
-    angle = 0
+        # Position attribute
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(0))
+        glEnableVertexAttribArray(0)
 
-    # Model matrix: rotate cube over time
-    model = np.identity(4, dtype=np.float32)
-    c = cos(angle)
-    s = sin(angle)
+        # normal attribute
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(3 * vertices.itemsize))
+        glEnableVertexAttribArray(1)
 
-    # Rotation around Y axis
-    model[0, 0] = c
-    model[0, 2] = s
-    model[2, 0] = -s
-    model[2, 2] = c
+        # color attribute
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(6 * vertices.itemsize))
+        glEnableVertexAttribArray(2)
 
-    # Set uniform matrices
-    model_loc = glGetUniformLocation(shader_program, "model")
-    view_loc = glGetUniformLocation(shader_program, "view")
-    proj_loc = glGetUniformLocation(shader_program, "projection")
-    light_dir_loc = glGetUniformLocation(shader_program, "lightDir")
-    light_color_loc = glGetUniformLocation(shader_program, "lightColor")
+        # color opacity attribute
+        glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(9 * vertices.itemsize))
+        glEnableVertexAttribArray(3)
 
-    # uniformのセット
-    glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
-    glUniformMatrix4fv(proj_loc, 1, GL_FALSE, projection)
-    glUniform3f(light_dir_loc, 1.0, -3.0, -1.0)  # ディレクショナルライトの方向例
-    glUniform3f(light_color_loc, 1.0, 1.0, 1.0)  # 白色光
+        # uv attribute
+        glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(10 * vertices.itemsize))
+        glEnableVertexAttribArray(4)
 
-    # 1つ目のビューポートの設定（左）
-    # View matrix (camera)
-    glViewport(10, 100, 320, 320)   
+        # uv flag attribute
+        glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, 13 * vertices.itemsize, ctypes.c_void_p(12 * vertices.itemsize))
+        glEnableVertexAttribArray(5)
 
-    #glm.lookat()でカメラの設定
-    cameraPos = glm.vec3(6.0, 7.2, 7.5,)
-    targetPos = glm.vec3(-1.0, -1.0, 0.0)
-    upVector = glm.vec3(0.0, 1.0, 0.0)    
-    view_glm = glm.lookAt(cameraPos, targetPos, upVector)   #俯瞰の視点
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        glBindVertexArray(0)
 
-    # numpyの回転行列にglmの回転行列の姿勢データを入れる
-    view = np.identity(4, dtype=np.float32)
-    view[0,0] = view_glm[0,0]
-    view[1,0] = view_glm[1,0]
-    view[2,0] = view_glm[2,0]
-    view[3,0] = view_glm[3,0]
+        # Projection matrix (perspective)
+        projection = np.identity(4, dtype=np.float32)
 
-    view[0,1] = view_glm[0,1]
-    view[1,1] = view_glm[1,1]
-    view[2,1] = view_glm[2,1]
-    view[3,1] = view_glm[3,1]
+        fov = 60
+        aspect_ratio = 320 / 320
+        near = 0.5
+        far = 30.0
 
-    view[0,2] = view_glm[0,2]
-    view[1,2] = view_glm[1,2]
-    view[2,2] = view_glm[2,2]
-    view[3,2] = view_glm[3,2]
-    
-    view[0,3] = view_glm[0,3]
-    view[1,3] = view_glm[1,3]
-    view[2,3] = view_glm[2,3]
-    view[3,3] = view_glm[3,3]
+        f = 1.0 / tan(radians(fov) / 2)
+        projection[0, 0] = f / aspect_ratio
+        projection[1, 1] = f
+        projection[2, 2] = (far + near) / (near - far)
+        projection[2, 3] = (2 * far * near) / (near - far)
+        projection[3, 2] = -0.5
+        projection[3, 3] = 0
+            
+        # Start render 
+        glfw.poll_events()
 
-    # uniformのセット
-    glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
-    # Draw cube
-    glBindVertexArray(VAO)
-    glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
+        glUseProgram(shader_program)
 
-    # 2つ目のビューポートの設定（右）
-    # View matrix (camera)
-    glViewport(340, 100, 320, 320)    
+        glUniform1i(glGetUniformLocation(shader_program, "texture0"), 0) # GL_TEXTURE0を渡す
+        glUniform1i(glGetUniformLocation(shader_program, "texture1"), 1) # GL_TEXTURE1を渡す
 
-    robo_x, robo_y, robo_z = bodies_robo[2].getPosition()   #boxの座標を取得
-    gaze_x, gaze_y, gaze_z = bodies_robo[3].getPosition()   #boxの座標を取得
+        # Model matrix: rotate 
+        model = np.identity(4, dtype=np.float32)
 
-    #glm.lookat()でカメラの設定
-    cameraPos = glm.vec3( robo_x, robo_y, robo_z)
-    targetPos = glm.vec3( gaze_x, 0.148, gaze_z)
-    upVector = glm.vec3(0.0, 1.0, 0.0)    
-    view_glm = glm.lookAt(cameraPos, targetPos, upVector)   #俯瞰の視点
+        #
+        if body_index != None:
+            #姿勢を取得して回転行列に代入
+            if name == "robo":
+                R = bodies_robo[body_index].getRotation()   
+            elif name == "furniture":
+                R = bodies[body_index].getRotation()
+            model[0,0] = R[0]
+            model[1,0] = R[1]
+            model[2,0] = R[2]
+            model[0,1] = R[3]
+            model[1,1] = R[4]
+            model[2,1] = R[5]
+            model[0,2] = R[6]
+            model[1,2] = R[7]
+            model[2,2] = R[8]
+            #座標を取得して回転行列に代入
+            if name == "robo":
+                px,py,pz = bodies_robo[body_index].getPosition()
+            elif name == "furniture":
+                px,py,pz = bodies[body_index].getPosition()
+            model[3, 0] = px
+            model[3, 1] = py
+            model[3, 2] = pz
 
-    # numpyの回転行列にglm.lookAt()の回転行列のデータを入れる
-    view = np.identity(4, dtype=np.float32)    
-    view[0,0] = view_glm[0,0]
-    view[1,0] = view_glm[1,0]
-    view[2,0] = view_glm[2,0]
-    view[3,0] = view_glm[3,0]
+        # Set uniform matrices
+        model_loc = glGetUniformLocation(shader_program, "model")
+        view_loc = glGetUniformLocation(shader_program, "view")
+        proj_loc = glGetUniformLocation(shader_program, "projection")
+        light_dir_loc = glGetUniformLocation(shader_program, "lightDir")
+        light_color_loc = glGetUniformLocation(shader_program, "lightColor")
 
-    view[0,1] = view_glm[0,1]
-    view[1,1] = view_glm[1,1]
-    view[2,1] = view_glm[2,1]
-    view[3,1] = view_glm[3,1]
+        # uniformのセット
+        glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
+        glUniformMatrix4fv(proj_loc, 1, GL_FALSE, projection)
+        glUniform3f(light_dir_loc, 1.0, -3.0, -1.0)  # ディレクショナルライトの方向例
+        glUniform3f(light_color_loc, 1.0, 1.0, 1.0)  # 白色光
 
-    view[0,2] = view_glm[0,2]
-    view[1,2] = view_glm[1,2]
-    view[2,2] = view_glm[2,2]
-    view[3,2] = view_glm[3,2]
-    
-    view[0,3] = view_glm[0,3]
-    view[1,3] = view_glm[1,3]
-    view[2,3] = view_glm[2,3]
-    view[3,3] = view_glm[3,3]
+        # 1つ目のビューポートの設定（左）
+        # View matrix (camera)
+        glViewport(10, 100, 320, 320)   
 
-    # uniformのセット
-    glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)    
-    # Draw cube
-    glBindVertexArray(VAO)
-    glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
+        #glm.lookat()でカメラの設定
+        cameraPos = glm.vec3(6.0, 7.2, 7.5,)
+        targetPos = glm.vec3(-1.0, -1.0, 0.0)
+        upVector = glm.vec3(0.0, 1.0, 0.0)    
+        view_glm = glm.lookAt(cameraPos, targetPos, upVector)   #俯瞰の視点
+
+        # numpyの回転行列にglmの回転行列の姿勢データを入れる
+        view = np.identity(4, dtype=np.float32)
+        view[0,0] = view_glm[0,0]
+        view[1,0] = view_glm[1,0]
+        view[2,0] = view_glm[2,0]
+        view[3,0] = view_glm[3,0]
+
+        view[0,1] = view_glm[0,1]
+        view[1,1] = view_glm[1,1]
+        view[2,1] = view_glm[2,1]
+        view[3,1] = view_glm[3,1]
+
+        view[0,2] = view_glm[0,2]
+        view[1,2] = view_glm[1,2]
+        view[2,2] = view_glm[2,2]
+        view[3,2] = view_glm[3,2]
+        
+        view[0,3] = view_glm[0,3]
+        view[1,3] = view_glm[1,3]
+        view[2,3] = view_glm[2,3]
+        view[3,3] = view_glm[3,3]
+
+        # uniformのセット
+        glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
+        # Draw cube
+        glBindVertexArray(VAO)
+        glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
+
+        # 2つ目のビューポートの設定（右）
+        # View matrix (camera)
+        glViewport(340, 100, 320, 320)    
+
+        robo_x, robo_y, robo_z = bodies_robo[2].getPosition()   #boxの座標を取得
+        gaze_x, gaze_y, gaze_z = bodies_robo[3].getPosition()   #boxの座標を取得
+
+        #glm.lookat()でカメラの設定
+        cameraPos = glm.vec3( robo_x, robo_y, robo_z)
+        targetPos = glm.vec3( gaze_x, 0.148, gaze_z)
+        upVector = glm.vec3(0.0, 1.0, 0.0)    
+        view_glm = glm.lookAt(cameraPos, targetPos, upVector)   #俯瞰の視点
+
+        # numpyの回転行列にglm.lookAt()の回転行列のデータを入れる
+        view = np.identity(4, dtype=np.float32)    
+        view[0,0] = view_glm[0,0]
+        view[1,0] = view_glm[1,0]
+        view[2,0] = view_glm[2,0]
+        view[3,0] = view_glm[3,0]
+
+        view[0,1] = view_glm[0,1]
+        view[1,1] = view_glm[1,1]
+        view[2,1] = view_glm[2,1]
+        view[3,1] = view_glm[3,1]
+
+        view[0,2] = view_glm[0,2]
+        view[1,2] = view_glm[1,2]
+        view[2,2] = view_glm[2,2]
+        view[3,2] = view_glm[3,2]
+        
+        view[0,3] = view_glm[0,3]
+        view[1,3] = view_glm[1,3]
+        view[2,3] = view_glm[2,3]
+        view[3,3] = view_glm[3,3]
+
+        # uniformのセット
+        glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)    
+        # Draw cube
+        glBindVertexArray(VAO)
+        glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
 
     glfw.swap_buffers(window)
 
