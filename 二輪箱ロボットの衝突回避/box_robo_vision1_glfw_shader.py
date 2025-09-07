@@ -575,7 +575,6 @@ if not window:
 #
 glfw.make_context_current(window)
 
-
 # Create a world object
 world = ode.World()
 world.setGravity( (0,-9.81,0) )
@@ -609,10 +608,10 @@ counter = 0
 objcount = 0
 lasttime = time.time()
 
+
 # 箱ロボットの初期位置
 sx = 2.0
 sz = 2.0
-
 #odeオブジェクトbodies_robo[]の描画の初期設定
 init_object_robo = []
                          #name               #shape                  #position                       #color
@@ -665,6 +664,7 @@ init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -1.2,  0.5,  1
 init_object.append(["box",              ( 0.15, 1.0, 0.15),     ( -2.2,  0.5,  1.0 ),           ( 0.2, 0.20, 0.2, 1.0)])    # : 棚の脚
 """
 
+
 #ロボットの描画の初期設定をbodies_robo[]とgeoms_robo[]に入れる
 for iob in init_object_robo: # iob  = [ name, shape, position, color ]
     drop_object2(iob, bodies_robo, geoms_robo, 7.0)
@@ -672,6 +672,75 @@ for iob in init_object_robo: # iob  = [ name, shape, position, color ]
 #家具の描画の初期設定をbodies[]とgeoms[]に入れる
 for iob in init_object: # iob  = [ name, shape, position, color ]
     drop_object2(iob, bodies, geoms, 10.0)
+
+
+#シェーダー用の頂点データリスト
+vertices_data_list = []
+
+#床と壁の頂点データを作成
+vertices = np.array([], dtype=np.float32)
+indices = np.array([], dtype=np.uint32)
+#床と壁のverticesデータを作成
+                    # positions        # normals         # color               # texture_uv and flag
+floor_arr = np.array([  4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   1.0, 1.0, 1.0, 1.0,   4.5, 4.5, 0.7,   #床 0
+                        4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   1.0, 1.0, 1.0, 1.0,   4.5, 0.0, 0.7,   #床 1
+                        -4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   1.0, 1.0, 1.0, 1.0,   0.0, 4.5, 0.7,   #床 2
+                        -4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   1.0, 1.0, 1.0, 1.0,   0.0, 0.0, 0.7,   #床 3
+
+                        -4.5, 0.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0, 1.0,   0.0, 0.0, 1.0,   #壁奥 4
+                        4.5, 0.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0, 1.0,   4.5, 0.0, 1.0,   #壁奥 5
+                        -4.5, 2.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0, 1.0,   0.0, 1.0, 1.0,   #壁奥 6
+                        4.5, 2.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0, 1.0,   4.5, 1.0, 1.0,   #壁奥 7
+
+                        -4.5, 0.0, -4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   0.0, 0.0, 1.0,   #壁左 8
+                        -4.5, 0.0,  4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   4.5, 0.0, 1.0,   #壁左 9
+                        -4.5, 2.0, -4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   0.0, 1.0, 1.0,   #壁左 10
+                        -4.5, 2.0,  4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   4.5, 1.0, 1.0,   #壁左 11
+
+                        4.5, 0.0, -4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   0.0, 0.0, 1.0,   #壁右 12
+                        4.5, 0.0,  4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   4.5, 0.0, 1.0,   #壁右 13
+                        4.5, 2.0, -4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   0.0, 1.0, 1.0,   #壁右 14
+                        4.5, 2.0,  4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   4.5, 1.0, 1.0,   #壁右 15
+
+                        -4.5, 0.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0, 1.0,   0.0, 0.0, 1.0,   #壁手前 16
+                        4.5, 0.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0, 1.0,   4.5, 0.0, 1.0,   #壁手前 17
+                        -4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0, 1.0,   0.0, 1.0, 1.0,   #壁手前 18
+                        4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0, 1.0,   4.5, 1.0, 1.0    #壁手前 19
+                    ], dtype=np.float32)
+vertices = np.append(vertices, floor_arr)
+#床と壁のIndicesデータを作成
+if len(indices) == 0:
+    i = 0
+else:
+    i = max(indices) + 1
+arr3 = np.array([0+i,1+i,2+i,  3+i,1+i,2+i,  #床
+                4+i,5+i,6+i,  7+i,5+i,6+i,  #壁奥
+                8+i,9+i,10+i,  11+i,9+i,10+i,    #壁左
+                12+i,13+i,14+i,  15+i,13+i,14+i, #壁右
+                16+i,17+i,18+i,  19+i,17+i,18+i  #壁手前    
+                ], dtype=np.uint32)
+indices = np.append(indices, arr3)
+vertices_data_list.append(["floor and wall", vertices, indices, None])
+
+#家具の頂点データを作成
+for index, b in enumerate(bodies):
+    vertices = np.array([], dtype=np.float32)
+    indices = np.array([], dtype=np.uint32)
+    #bodyの頂点データを作成
+    vertices, indices = draw_body(b, vertices, indices, init_object[index][3])  # init_object[index][3]は、colorのデータ
+    vertices_data_list.append(["furniture", vertices, indices, index])
+
+#ロボットの頂点データを作成
+for index, b in enumerate(bodies_robo):
+    if index == 3:#注視点用boxを描画しない
+        pass
+    else:
+        vertices = np.array([], dtype=np.float32)
+        indices = np.array([], dtype=np.uint32)            
+        #bodyの頂点データを作成
+        vertices, indices = draw_body(b, vertices, indices, init_object_robo[index][3])  # init_object[index][3]は、colorのデータ
+        vertices_data_list.append(["robo", vertices, indices, index])
+
 
 #二輪箱ロボットのヒンジジョイントの作成
 hinge_joints=[]
@@ -723,76 +792,11 @@ for index, b in enumerate(bodies):
 
 #シェーダーで描画
 def use_shader_in_tutorial3(window, shader_program, VAO, VBO, EBO):
-
-    vertices_data_list = []
+    global vertices_data_list
 
     vertices = np.array([], dtype=np.float32)
     indices = np.array([], dtype=np.uint32)
 
-    #床と壁の頂点データを作成
-    #床と壁のverticesデータを作成
-                           # positions        # normals         # color               # texture_uv and flag
-    floor_arr = np.array([  4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   1.0, 1.0, 1.0, 1.0,   4.5, 4.5, 0.7,   #床 0
-                            4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   1.0, 1.0, 1.0, 1.0,   4.5, 0.0, 0.7,   #床 1
-                           -4.5, 0.0,  4.5,   0.0, 1.0,  0.0,   1.0, 1.0, 1.0, 1.0,   0.0, 4.5, 0.7,   #床 2
-                           -4.5, 0.0, -4.5,   0.0, 1.0,  0.0,   1.0, 1.0, 1.0, 1.0,   0.0, 0.0, 0.7,   #床 3
-
-                           -4.5, 0.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0, 1.0,   0.0, 0.0, 1.0,   #壁奥 4
-                            4.5, 0.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0, 1.0,   4.5, 0.0, 1.0,   #壁奥 5
-                           -4.5, 2.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0, 1.0,   0.0, 1.0, 1.0,   #壁奥 6
-                            4.5, 2.0, -4.5,   0.0, 0.0,  1.0,   1.0, 1.0, 1.0, 1.0,   4.5, 1.0, 1.0,   #壁奥 7
-
-                           -4.5, 0.0, -4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   0.0, 0.0, 1.0,   #壁左 8
-                           -4.5, 0.0,  4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   4.5, 0.0, 1.0,   #壁左 9
-                           -4.5, 2.0, -4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   0.0, 1.0, 1.0,   #壁左 10
-                           -4.5, 2.0,  4.5,   1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   4.5, 1.0, 1.0,   #壁左 11
-
-                            4.5, 0.0, -4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   0.0, 0.0, 1.0,   #壁右 12
-                            4.5, 0.0,  4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   4.5, 0.0, 1.0,   #壁右 13
-                            4.5, 2.0, -4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   0.0, 1.0, 1.0,   #壁右 14
-                            4.5, 2.0,  4.5,  -1.0, 0.0,  0.0,   1.0, 1.0, 1.0, 1.0,   4.5, 1.0, 1.0,   #壁右 15
-
-                           -4.5, 0.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0, 1.0,   0.0, 0.0, 1.0,   #壁手前 16
-                            4.5, 0.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0, 1.0,   4.5, 0.0, 1.0,   #壁手前 17
-                           -4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0, 1.0,   0.0, 1.0, 1.0,   #壁手前 18
-                            4.5, 2.0,  4.5,   0.0, 0.0, -1.0,   1.0, 1.0, 1.0, 1.0,   4.5, 1.0, 1.0    #壁手前 19
-                           ], dtype=np.float32)
-    vertices = np.append(vertices, floor_arr)
-    #床と壁のIndicesデータを作成
-    if len(indices) == 0:
-        i = 0
-    else:
-        i = max(indices) + 1
-    arr3 = np.array([0+i,1+i,2+i,  3+i,1+i,2+i,  #床
-                     4+i,5+i,6+i,  7+i,5+i,6+i,  #壁奥
-                     8+i,9+i,10+i,  11+i,9+i,10+i,    #壁左
-                     12+i,13+i,14+i,  15+i,13+i,14+i, #壁右
-                     16+i,17+i,18+i,  19+i,17+i,18+i  #壁手前    
-                     ], dtype=np.uint32)
-    indices = np.append(indices, arr3)
-    vertices_data_list.append(["floor and wall", vertices, indices, None])
-
-    #ロボットの頂点データを作成
-    for index, b in enumerate(bodies_robo):
-        if index == 3:#注視点用boxを描画しない
-            pass
-        else:
-            vertices = np.array([], dtype=np.float32)
-            indices = np.array([], dtype=np.uint32)            
-            #bodyの頂点データを作成
-            vertices, indices = draw_body(b, vertices, indices, init_object_robo[index][3])  # init_object[index][3]は、colorのデータ
-
-            vertices_data_list.append(["robo", vertices, indices, index])
-
-    #家具の頂点データを作成
-    for index, b in enumerate(bodies):
-        vertices = np.array([], dtype=np.float32)
-        indices = np.array([], dtype=np.uint32)
-        #bodyの頂点データを作成
-        vertices, indices = draw_body(b, vertices, indices, init_object[index][3])  # init_object[index][3]は、colorのデータ
-
-        vertices_data_list.append(["furniture", vertices, indices, index])
-  
     #オブジェクトの頂点データを一つのオブジェクトごとに転送して描画
     for vdl in vertices_data_list:
 
@@ -985,8 +989,8 @@ def main():
     global counter, state, lasttime
     global bodies, geoms
 
-    capture_lst = []
-    capture_num = 0
+    capture_lst = []    #
+    capture_num = 0     #
 
     #テクスチャ読み込み#
     tex_floor = load_texture("sample1.png")
