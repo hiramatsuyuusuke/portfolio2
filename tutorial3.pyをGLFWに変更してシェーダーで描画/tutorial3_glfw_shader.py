@@ -282,7 +282,7 @@ def near_callback(args, geom1, geom2):
 # Create a world object
 world = ode.World()
 world.setGravity( (0,-9.81,0) )
-world.setERP(0.8)
+world.setERP(0.8)   #物体同士の反発を抑えたい場合は、0.2にする。計算精度向上の結果として弾まなくなる。
 world.setCFM(1E-5)
 
 # Create a space object
@@ -318,6 +318,7 @@ def process_input(window):
 
 #シェーダーで描画
 def use_shader_in_tutorial3(window, shader, VAO, VBO, EBO, vertices_data_list):
+    global bodies
 
     # glUseProgram
     shader.use() 
@@ -347,33 +348,18 @@ def use_shader_in_tutorial3(window, shader, VAO, VBO, EBO, vertices_data_list):
     view[3, 1] = -1.0  # Move on y axis
     view[3, 2] = -4.0  # Move on z axis
 
+    # Uniform変数に値を送信
+    shader.set_uniform_matrix4fv("view", view)
+    shader.set_uniform_matrix4fv("projection", projection)
+    shader.set_uniform3f("lightDir", 0.0, -3.0, -1.0)  # ディレクショナルライトの方向例
+    shader.set_uniform3f("lightColor", 0.7, 0.7, 0.7)  # 白色光
+    shader.set_uniform3f("objectColor", 1.0, 0.5, 0.31) # オブジェクトの色
+
     #boxの頂点データを一つのboxごとに転送して描画
     for vdl in vertices_data_list:
 
         #boxごとの頂点リストから頂点データを取得
         vertices, indices, body_index = vdl
-
-        # Model matrix: rotate box
-        model = np.identity(4, dtype=np.float32)
-
-        #
-        if body_index != None:
-            #boxの姿勢を取得して回転行列に代入
-            R = bodies[body_index].getRotation()
-            model[0,0] = R[0]
-            model[1,0] = R[1]
-            model[2,0] = R[2]
-            model[0,1] = R[3]
-            model[1,1] = R[4]
-            model[2,1] = R[5]
-            model[0,2] = R[6]
-            model[1,2] = R[7]
-            model[2,2] = R[8]
-            #boxの座標を取得して回転行列に代入
-            px,py,pz = bodies[body_index].getPosition()
-            model[3, 0] = px
-            model[3, 1] = py
-            model[3, 2] = pz
 
         #
         glBindVertexArray(VAO)
@@ -397,20 +383,35 @@ def use_shader_in_tutorial3(window, shader, VAO, VBO, EBO, vertices_data_list):
         glBindBuffer(GL_ARRAY_BUFFER, 0)
         glBindVertexArray(0)
 
+        # Model matrix: rotate box
+        model = np.identity(4, dtype=np.float32)
+
+        #
+        if body_index != None:
+            #boxの姿勢を取得して回転行列に代入
+            R = bodies[body_index].getRotation()
+            model[0,0] = R[0]
+            model[1,0] = R[1]
+            model[2,0] = R[2]
+            model[0,1] = R[3]
+            model[1,1] = R[4]
+            model[2,1] = R[5]
+            model[0,2] = R[6]
+            model[1,2] = R[7]
+            model[2,2] = R[8]
+            #boxの座標を取得して回転行列に代入
+            px,py,pz = bodies[body_index].getPosition()
+            model[3, 0] = px
+            model[3, 1] = py
+            model[3, 2] = pz
+
         # Uniform変数に値を送信
         shader.set_uniform_matrix4fv("model", model)
-        shader.set_uniform_matrix4fv("view", view)
-        shader.set_uniform_matrix4fv("projection", projection)
-        shader.set_uniform3f("lightDir", 0.0, -3.0, -1.0)  # ディレクショナルライトの方向例
-        shader.set_uniform3f("lightColor", 0.7, 0.7, 0.7)  # 白色光
-        shader.set_uniform3f("objectColor", 1.0, 0.5, 0.31) # オブジェクトの色
 
         # Draw cube
         glBindVertexArray(VAO)
         glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
 
-    glfw.poll_events()
-    glfw.swap_buffers(window)
 
 def main():
     global counter, state, lasttime
@@ -502,7 +503,10 @@ def main():
         ##衝突検出部分を書き換え。終了。#############
 
         lasttime = time.time()
-        
+
+        glfw.swap_buffers(window)
+        glfw.poll_events()
+
     # Cleanup
     glDeleteVertexArrays(1, [VAO])
     glDeleteBuffers(1, [VBO])

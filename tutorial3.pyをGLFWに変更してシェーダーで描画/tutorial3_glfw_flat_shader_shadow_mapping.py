@@ -384,7 +384,7 @@ def near_callback(args, geom1, geom2):
 # Create a world object
 world = ode.World()
 world.setGravity( (0,-9.81,0) )
-world.setERP(0.8)
+world.setERP(0.8)   #物体同士の反発を抑えたい場合は、0.2にする。計算精度向上の結果として弾まなくなる。
 world.setCFM(1E-5)
 
 # Create a space object
@@ -412,16 +412,39 @@ counter = 0
 objcount = 0
 lasttime = time.time()
 
+#キー入力
+def process_input(window):
+    # Close window on pressing ESC
+    if glfw.get_key(window, glfw.KEY_ESCAPE) == glfw.PRESS:
+        glfw.set_window_should_close(window, True)
 
 #シェーダーで描画
 def use_shader_in_tutorial3(shader_program, depth_shader_program, VAO, VBO, EBO, FBO, depth_texture, vertices_data_list):
+    global bodies
 
-    # シェーダープログラムを使用
+
+    # 深度マップ用シェーダープログラムを使用
     depth_shader_program.use()
 
     glClearColor(0.2, 0.3, 0.3, 1)
     glBindFramebuffer(GL_FRAMEBUFFER, FBO)  #FBOにバインド
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+
+    #レンダリングの設定：ライト視点の深度マップを生成するための設定。
+    # Define light's position and target
+    light_position = Vector3([0.0, 2.0*3.0, 3.0*3.0])
+    light_target = Vector3([0.0, 0.0, 0.0])
+    light_up = Vector3([0.0, 1.0, 0.0])
+    # Create light's view matrix (lookAt matrix)
+    light_view = Matrix44.look_at(light_position, light_target, light_up)
+    # Define light's projection matrix
+    light_projection = Matrix44.perspective_projection(45.0, 800.0/600.0, 1, 20)
+    # Combine to form the lightSpaceMatrix
+    lightSpaceMatrix = light_projection * light_view
+
+    # Uniform変数に4×4マトリックスを送信
+    depth_shader_program.set_uniform_matrix4fv("lightSpaceMatrix", lightSpaceMatrix)
 
     #一つのオブジェクトごとに頂点データを転送して描画。深度マップを生成するためにFBOにレンダリング。
     for vdl in vertices_data_list:
@@ -465,33 +488,38 @@ def use_shader_in_tutorial3(shader_program, depth_shader_program, VAO, VBO, EBO,
             model[3][ 1] = py
             model[3][ 2] = pz
 
-        #レンダリングの設定：ライト視点の深度マップを生成するためのレンダリング。
-        # Define light's position and target
-        light_position = Vector3([0.0, 2.0*3.0, 3.0*3.0])
-        light_target = Vector3([0.0, 0.0, 0.0])
-        light_up = Vector3([0.0, 1.0, 0.0])
-        # Create light's view matrix (lookAt matrix)
-        light_view = Matrix44.look_at(light_position, light_target, light_up)
-        # Define light's projection matrix
-        light_projection = Matrix44.perspective_projection(45.0, 800.0/600.0, 1, 20)
-        # Combine to form the lightSpaceMatrix
-        lightSpaceMatrix = light_projection * light_view
-
         # Uniform変数に4×4マトリックスを送信
         depth_shader_program.set_uniform_matrix4fv("model", model)
-        depth_shader_program.set_uniform_matrix4fv("lightSpaceMatrix", lightSpaceMatrix)
 
         # Draw cube. 1回目のレンダリング：ライト視点の深度マップを生成するためのレンダリング。
         glViewport(0, 0, 800, 600)
         glBindVertexArray(VAO)
         glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
 
-    # シェーダープログラムを使用
+    # シーン描画用シェーダープログラムを使用
     shader_program.use()
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0)  #デフォルトフレームバッファにバインド
     # デフォルトフレームバッフをクリア
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+    #レンダリングの設定。シーンの設定。
+    # Define view position and target
+    view_position = Vector3([1.0, 4.0, 4.0])
+    view_target = Vector3([0.0, 0.0, 0.0])
+    view_up = Vector3([0.0, 1.0, 0.0])
+    # Create view matrix (lookAt matrix)
+    view = Matrix44.look_at(view_position, view_target, view_up)
+
+    # Uniform変数に4×4マトリックスを送信
+    shader_program.set_uniform_matrix4fv("view", view)
+    shader_program.set_uniform_matrix4fv("projection", light_projection)
+    shader_program.set_uniform_matrix4fv("lightSpaceMatrix", lightSpaceMatrix)
+    
+    # Uniform変数に3次元ベクトルを送信
+    shader_program.set_uniform3f("lightDir", 0.0, -2.0, -3.0)  # ディレクショナルライトの方向例
+    shader_program.set_uniform3f("lightColor", 0.7, 0.7, 0.7)  # 白色光
+    shader_program.set_uniform3f("objectColor", 1.0, 0.5, 0.31)  # オブジェクトの色
 
     #一つのオブジェクトごとに頂点データを転送して描画。シャドウマッピングで影のあるシーンをレンダリング。
     for vdl in vertices_data_list:
@@ -538,23 +566,9 @@ def use_shader_in_tutorial3(shader_program, depth_shader_program, VAO, VBO, EBO,
             model[3][ 1] = py
             model[3][ 2] = pz
 
-        #レンダリングの設定。シーンのレンダリング。
-        # Define view position and target
-        view_position = Vector3([1.0, 4.0, 4.0])
-        view_target = Vector3([0.0, 0.0, 0.0])
-        view_up = Vector3([0.0, 1.0, 0.0])
-        # Create view matrix (lookAt matrix)
-        view = Matrix44.look_at(view_position, view_target, view_up)
-
         # Uniform変数に4×4マトリックスを送信
         shader_program.set_uniform_matrix4fv("model", model)
-        shader_program.set_uniform_matrix4fv("view", view)
-        shader_program.set_uniform_matrix4fv("projection", light_projection)
-        shader_program.set_uniform_matrix4fv("lightSpaceMatrix", lightSpaceMatrix)
-        # Uniform変数に3次元ベクトルを送信
-        shader_program.set_uniform3f("lightDir", 0.0, -2.0, -3.0)  # ディレクショナルライトの方向例
-        shader_program.set_uniform3f("lightColor", 0.7, 0.7, 0.7)  # 白色光
-        shader_program.set_uniform3f("objectColor", 1.0, 0.5, 0.31)  # オブジェクトの色
+
         # テクスチャを送信
         shader_program.set_uniform1i("shadowMap", 0)
         
@@ -637,6 +651,9 @@ def main():
 
     #物理演算とシェーダのループ部分
     while not glfw.window_should_close(window):
+
+        # Handle inputs. ESCキーでウィンドウを閉じる
+        process_input(window) 
 
         #頂点データリスト（シェーダー用のリスト）にbody（ODEのオブジェクト）の頂点データを追加
         for index, body in enumerate(bodies):
