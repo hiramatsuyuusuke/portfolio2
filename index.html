@@ -71,7 +71,7 @@
         <h3 id="info0001">tutorial2.pyの実行例</h3>
 
         <video src="videos/tutorial2.pyの実行結果.mp4" controls class="video_index"></video>
-<pre style = "font-size: 15px">
+        <pre style = "font-size: 15px">
 
 tutorial2.pyは、ODE-0.16.4付属のPyODE
 で書かれたサンプルファイルです。tutori
@@ -80,12 +80,11 @@ al2.pyは、二重振り子をシミュレーション
 ること無く実行出来ました。また、tutori
 al2.pyを実行するには、動画表示用のPyga
 meのインストールが必要です。
-</pre>
+        </pre>
         <hr>
         <h3 id="info0002">tutorial3.py（コード修正有）の実行例</h3>
         <video src="videos/tutorial3.py（コードの変更有）の実行結果.mp4" controls class="video_index"></video>
-<pre style = "font-size: 15px">
-
+        <pre style = "font-size: 15px">
 　tutorial3.pyは、ODE-0.16.4付属のPyODE
 で書かれたサンプルファイルです。衝突検出
 をシミュレーションします。コードを修正し
@@ -94,13 +93,15 @@ meのインストールが必要です。
 分です。下記のように、188行目のコードに
 「b」を加えて、文字列をbyte列に変換しま
 した。 
-
-<pre class="andromeeda" style="background-color:#23262E;color:#D5CED9;padding:20px" tabindex="0"><code><div class="line"><span style="color:#FFE66D">glutCreateWindow</span><span style="color:#D5CED9"> (</span><span style="color:#C74DED">b</span><span style="color:#96E072">"testode"</span><span style="color:#D5CED9">)</span></div></code></pre>
-　2つ目の修正は、「衝突検出」部分です。269行目～277行目のコードを
-下記のコードに書き換えました。<span style="color:green">衝突検出を行うnear_callback関数を直
-接使うように修正しました。</span>そして、全てのオブジェクトに対して衝突検
-出するために、二重forループの中にnear_callback関数を置きました。
-
+        </pre>
+<pre class="andromeeda" style="background-color:#23262E;color:#D5CED9;padding:20px" tabindex="0"><code><div class="line"><span style="color:#FFE66D">glutCreateWindow</span><span style="color:#D5CED9"> (</span><span style="color:#C74DED">b</span><span style="color:#96E072">
+"testode"
+</span><span style="color:#D5CED9">)</span></div></code></pre>
+        <p style = "font-size: 15px">
+        　2つ目の修正は、「衝突検出」部分です。269行目～277行目のコードを下記のコードに書き換えました。
+        <span style="color:green">衝突検出を行うnear_callback関数を直接使うように修正しました。
+        </span>そして、全てのオブジェクトに対して衝突検出するために、二重forループの中にnear_callback関数を置きました。
+        </p>
 <pre class="andromeeda" style="background-color:#23262E;color:#D5CED9;padding:20px" tabindex="0"><code><div class="line"><span style="color:#C74DED">for</span><span style="color:#D5CED9"> i </span><span style="color:#C74DED">in</span><span style="color:#FFE66D"> range</span><span style="color:#D5CED9">(n):</span></div><div class="line"><span style="color:#C74DED">    for</span><span style="color:#D5CED9"> g1 </span><span style="color:#C74DED">in</span><span style="color:#D5CED9"> geoms:    </span></div><div class="line"><span style="color:#C74DED">        for</span><span style="color:#D5CED9"> g2 </span><span style="color:#C74DED">in</span><span style="color:#D5CED9"> geoms:</span></div><div class="line"><span style="color:#FFE66D">            near_callback</span><span style="color:#D5CED9">((world,contactgroup), g1, g2)</span></div><div class="line">
 </div><div class="line"><span style="color:#C74DED">    for</span><span style="color:#D5CED9"> g1 </span><span style="color:#C74DED">in</span><span style="color:#D5CED9"> geoms:</span></div><div class="line"><span style="color:#FFE66D">        near_callback</span><span style="color:#D5CED9">((world,contactgroup), g1, floor)</span></div><div class="line">
 </div><div class="line"><span style="color:#A0A1A7CC">    # Simulation step</span></div><div class="line"><span style="color:#D5CED9">    world.</span><span style="color:#FFE66D">step</span><span style="color:#D5CED9">(dt</span><span style="color:#EE5D43">/</span><span style="color:#D5CED9">n)</span></div><div class="line"><span style="color:#A0A1A7CC">    # Remove all contact joints</span></div><div class="line"><span style="color:#D5CED9">    contactgroup.</span><span style="color:#FFE66D">empty</span><span style="color:#D5CED9">()</span></div></code></pre>
