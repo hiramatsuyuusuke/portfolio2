@@ -77,8 +77,7 @@
         al2.pyは、二重振り子をシミュレーション
         します。tutorial2.pyは、コードを修正す
         ること無く実行出来ました。また、tutori
-        al2.pyを実行するには、動画表示用のPyga
-        meのインストールが必要です。
+        al2.pyを実行するには、動画表示用のPygameのインストールが必要です。
         </p>
         <hr>
         <h3 id="info0002">tutorial3.py（コード修正有）の実行例</h3>
@@ -93,17 +92,15 @@
         「b」を加えて、文字列をbyte列に変換しま
         した。 
         </p>
-        <pre class="andromeeda" style="background-color:#23262E;color:#D5CED9;padding:20px" tabindex="0"><code><div class="line"><span style="color:#FFE66D">glutCreateWindow</span><span style="color:#D5CED9"> (</span><span style="color:#C74DED">b</span><span style="color:#96E072">"testode"</span><span style="color:#D5CED9">)</span></div></code>
-        </pre>
+        <pre class="andromeeda" style="font-size:12px;background-color:#23262E;color:#D5CED9;padding:20px" tabindex="0"><code><div class="line"><span style="color:#FFE66D">glutCreateWindow</span><span style="color:#D5CED9"> (</span><span style="color:#C74DED">b</span><span style="color:#96E072">"testode"</span><span style="color:#D5CED9">)</span></div></code></pre>
         <p style = "font-size: 15px">
         　2つ目の修正は、「衝突検出」部分です。269行目～277行目のコードを下記のコードに書き換えました。
         <span style="color:green">衝突検出を行うnear_callback関数を直接使うように修正しました。
         </span>そして、全てのオブジェクトに対して衝突検出するために、二重forループの中にnear_callback関数を置きました。
         </p>
-        <pre class="andromeeda" style="background-color:#23262E;color:#D5CED9;padding:20px" tabindex="0"><code><div class="line"><span style="color:#C74DED">for</span><span style="color:#D5CED9"> i </span><span style="color:#C74DED">in</span><span style="color:#FFE66D"> range</span><span style="color:#D5CED9">(n):</span></div><div class="line"><span style="color:#C74DED">    for</span><span style="color:#D5CED9"> g1 </span><span style="color:#C74DED">in</span><span style="color:#D5CED9"> geoms:    </span></div><div class="line"><span style="color:#C74DED">        for</span><span style="color:#D5CED9"> g2 </span><span style="color:#C74DED">in</span><span style="color:#D5CED9"> geoms:</span></div><div class="line"><span style="color:#FFE66D">            near_callback</span><span style="color:#D5CED9">((world,contactgroup), g1, g2)</span></div><div class="line">
+        <pre class="andromeeda" style="font-size:12px;background-color:#23262E;color:#D5CED9;padding:20px" tabindex="0"><code><div class="line"><span style="color:#C74DED">for</span><span style="color:#D5CED9"> i </span><span style="color:#C74DED">in</span><span style="color:#FFE66D"> range</span><span style="color:#D5CED9">(n):</span></div><div class="line"><span style="color:#C74DED">    for</span><span style="color:#D5CED9"> g1 </span><span style="color:#C74DED">in</span><span style="color:#D5CED9"> geoms:    </span></div><div class="line"><span style="color:#C74DED">        for</span><span style="color:#D5CED9"> g2 </span><span style="color:#C74DED">in</span><span style="color:#D5CED9"> geoms:</span></div><div class="line"><span style="color:#FFE66D">            near_callback</span><span style="color:#D5CED9">((world,contactgroup), g1, g2)</span></div><div class="line">
         </div><div class="line"><span style="color:#C74DED">    for</span><span style="color:#D5CED9"> g1 </span><span style="color:#C74DED">in</span><span style="color:#D5CED9"> geoms:</span></div><div class="line"><span style="color:#FFE66D">        near_callback</span><span style="color:#D5CED9">((world,contactgroup), g1, floor)</span></div><div class="line">
-        </div><div class="line"><span style="color:#A0A1A7CC">    # Simulation step</span></div><div class="line"><span style="color:#D5CED9">    world.</span><span style="color:#FFE66D">step</span><span style="color:#D5CED9">(dt</span><span style="color:#EE5D43">/</span><span style="color:#D5CED9">n)</span></div><div class="line"><span style="color:#A0A1A7CC">    # Remove all contact joints</span></div><div class="line"><span style="color:#D5CED9">    contactgroup.</span><span style="color:#FFE66D">empty</span><span style="color:#D5CED9">()</span></div></code>
-        </pre>
+        </div><div class="line"><span style="color:#A0A1A7CC">    # Simulation step</span></div><div class="line"><span style="color:#D5CED9">    world.</span><span style="color:#FFE66D">step</span><span style="color:#D5CED9">(dt</span><span style="color:#EE5D43">/</span><span style="color:#D5CED9">n)</span></div><div class="line"><span style="color:#A0A1A7CC">    # Remove all contact joints</span></div><div class="line"><span style="color:#D5CED9">    contactgroup.</span><span style="color:#FFE66D">empty</span><span style="color:#D5CED9">()</span></div></code></pre>
         <p style = "font-size: 15px">
         　修正前のコードではspace.collide()が使われていましたが、環境
         構築時のエラー回避のために、ode.pyxの3559行目のdSpaceCollide()
