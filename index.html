@@ -115,44 +115,45 @@
         <hr>
         <h3 id="info0003">Visual Studio2022でODEをビルドしてDLLファイルとLIBファイルを作成</h3>
 
-    <p style = "font-size: 15px">
-    ・Dドライブ直下にode-0.16.4フォルダをコピーします。<br><br>
-    ・コマンドプロンプトで、下記のようにpremake4.exeファイルを実行します。<br><br>
-    </p>
+        <p style = "font-size: 15px">
+        ・Dドライブ直下にode-0.16.4フォルダをコピーします。<br><br>
+        ・コマンドプロンプトで、下記のようにpremake4.exeファイルを実行します。<br><br>
+        </p>
 <pre style = "font-size: 15px">
 <code style="background-color:#23262E;padding:20px"><span style="color:rgb(180, 180, 180)">D:\ode-0.16.4\build></span>premake4.exe --with-tests --with-demos vs2010</code>
 
 </pre>
-    <p style = "font-size: 15px">
-    ・「D:\ode-0.16.4\build\vs2010\ode.sln」が作成されるので、ode.slnファイルを開きます。<br><br>
-    ・VisualStudio作業画面の上部の「ビルド」タブの下にある「Win32」の欄から「構成マネージャ」を選びます。<br><br>
-    ・「構成マネージャ」の「アクティブソリューションプラットホーム」欄から「新規作成」を選びます。<br><br>
-    ・「新しいプラットホーム・・・」から「x64」を選びます。「ビルド」タブの下にある「Win32」の欄が「x64」に変わります。<br><br>
-    ・VisualStudio作業画面右側の「ソリューションエクスプローラー」の中にある、下から二番目の「ode」という名前のプロジェクト
-    をクリックして選択します。<br><br>
-    ・VisualStudio作業画面の上部の「プロジェクト」タブをクリックし、「プロパティ」をクリックします。<br><br>
-    ・「odeプロパティページ」の「構成プロパティ」の「全般」の「構成の種類」を「ダイナミック ライブラリ (.dll)」にし、「ode
-    プロパティページ」の「OK」ボタンを押します。<br><br>
-    ・VisualStudio作業画面の上部の「ビルド」タブをクリックして、「odeのビルド」をクリックすると複数のDLLファイルとLIBファイ
-    ルが作成されます。<br><br>
-    ・PyODEの環境構築で使うDLLファイルは、「D:\ode-0.16.4\build\vs2010\x64\DebugDoubleDLL」に作成されるode_doubled.dllファ
-    イルを使います。LIBファイルは、「D:\ode-0.16.4\lib\DebugDoubleDLL」に作成されるode_doubled.libファイルを使います。<br><br>
-    </p>
+        <p style = "font-size: 15px">
+        ・「D:\ode-0.16.4\build\vs2010\ode.sln」が作成されるので、ode.slnファイルを開きます。<br><br>
+        ・VisualStudio作業画面の上部の「ビルド」タブの下にある「Win32」の欄から「構成マネージャ」を選びます。<br><br>
+        ・「構成マネージャ」の「アクティブソリューションプラットホーム」欄から「新規作成」を選びます。<br><br>
+        ・「新しいプラットホーム・・・」から「x64」を選びます。「ビルド」タブの下にある「Win32」の欄が「x64」に変わります。<br><br>
+        ・VisualStudio作業画面右側の「ソリューションエクスプローラー」の中にある、下から二番目の「ode」という名前のプロジェクト
+        をクリックして選択します。<br><br>
+        ・VisualStudio作業画面の上部の「プロジェクト」タブをクリックし、「プロパティ」をクリックします。<br><br>
+        ・「odeプロパティページ」の「構成プロパティ」の「全般」の「構成の種類」を「ダイナミック ライブラリ (.dll)」にし、「ode
+        プロパティページ」の「OK」ボタンを押します。<br><br>
+        ・VisualStudio作業画面の上部の「ビルド」タブをクリックして、「odeのビルド」をクリックすると複数のDLLファイルとLIBファイ
+        ルが作成されます。<br><br>
+        ・PyODEの環境構築で使うDLLファイルは、「D:\ode-0.16.4\build\vs2010\x64\DebugDoubleDLL」に作成されるode_doubled.dllファ
+        イルを使います。LIBファイルは、「D:\ode-0.16.4\lib\DebugDoubleDLL」に作成されるode_doubled.libファイルを使います。<br><br>
+        </p>
 
-        <hr>
-        <h3 id="info0004">DLLファイルとLIBファイルを使用してsetup.pyをビルド</h3>
-<pre style = "font-size: 15px">
+            <hr>
+            <h3 id="info0004">DLLファイルとLIBファイルを使用してsetup.pyをビルド</h3>
+        <p style = "font-size: 15px">
 
-前もってPythonとCythonとpkg-configとWindows SDK( Windows 10 SDK(10.0.19041.0), Windows 11 SDK(10.0.22621.0) )をインスト
-ールする必要があります。今回使ったバージョンは、Python 3.12.7とCython 3.0.11です。Windows SDKが機能しない等、上手くいか
-ない場合は、 <a href="https://hitoridesign.com/wpc/2025/07/05/windows%e3%81%a7pyode%e3%80%80vs2022%e3%81%a7build/">こちら</a>のリンクが参考になります。
-
-まず、「D:\ode-0.16.4\bindings\python」に、
-<code style="color:red">「D:\ode-0.16.4\build\vs2010\x64\DebugDoubleDLL」</code>に作成されたode_doubled.dllファイルと
-<code style="color:red">「D:\ode-0.16.4\lib\DebugDoubleDLL」</code>に作成されたode_doubled.libファイルをコピーします。
-次に、コマンドプロンプトを開いて、下記のように実行していきます。
-
-<pre style="background-color:#23262E;width:750px;padding:20px">
+        　前もってPythonとCythonとpkg-configとWindows SDK( Windows 10 SDK(10.0.19041.0), Windows 11 SDK(10.0.22621.0) )をインスト
+        ールする必要があります。今回使ったバージョンは、Python 3.12.7とCython 3.0.11です。Windows SDKが機能しない等、上手くいか
+        ない場合は、 <a href="https://hitoridesign.com/wpc/2025/07/05/windows%e3%81%a7pyode%e3%80%80vs2022%e3%81%a7build/">こちら</a>のリンクが参考になります。
+        <br>
+        　まず、「D:\ode-0.16.4\bindings\python」に、
+        <code style="color:red">「D:\ode-0.16.4\build\vs2010\x64\DebugDoubleDLL」</code>に作成されたode_doubled.dllファイルと
+        <code style="color:red">「D:\ode-0.16.4\lib\DebugDoubleDLL」</code>に作成されたode_doubled.libファイルをコピーします。
+        <br>
+        　次に、コマンドプロンプトを開いて、下記のように実行していきます。
+        </p>
+<pre style="font-size: 15px;background-color:#23262E;width:750px;padding:20px">
 <code><span style="color:rgb(180, 180, 180)">D:\></span>path=%path%;c:\pkg-config\bin
 <span style="color:rgb(180, 180, 180)">D:\></span>set include=%include%;C:\Program Files (x86)\Wi
 ndows Kits\10\Include\10.0.22621.0\ucrt
@@ -166,34 +167,43 @@ ts\10\Lib\10.0.19041.0\ucrt\x64
 <span style="color:rgb(180, 180, 180)">D:\></span>set Path=%Path%;C:\Program Files (x86)\Windows 
 Kits\10\bin\10.0.19041.0\x64
 <span style="color:rgb(180, 180, 180)">D:\></span>set PKG_CONFIG_PATH=D:\ode-0.16.4
-</code></pre>
-　次に、「D:\ode-0.16.4\bindings\python」にあるode.pyxの3559行目のdSpaceCollide()関数と4463行目のdSpaceCollide2()関数
-をコメントアウトします。
+</code>
+</pre>
+        <p style = "font-size: 15px">
+        　次に、「D:\ode-0.16.4\bindings\python」にあるode.pyxの3559行目のdSpaceCollide()関数と4463行目のdSpaceCollide2()関数
+        をコメントアウトします。
 
-　次に、「D:\ode-0.16.4」にあるode.pc.inの名前をode.pcに変更して、3行目と10行目を下記のように書き換えます。
+        　次に、「D:\ode-0.16.4」にあるode.pc.inの名前をode.pcに変更して、3行目と10行目を下記のように書き換えます。
+<pre style = "font-size: 15px">
 
 3行目：<code style="background-color:#ffffff;padding:10px"><span style="color:#000000">libdir = ode_doubled.lib</span></code>
-
 10行目：<code style="background-color:#ffffff;padding:10px"><span style="color:#000000">Libs: ${libdir}</span></code>
 
-　次に、コマンドプロンプトで、下記のようにsetup.pyをビルドします。
+</pre>
+        　次に、コマンドプロンプトで、下記のようにsetup.pyをビルドします。
+<pre style = "font-size: 15px">
 
 <code style="background-color:#23262E;padding:20px"><span style="color:rgb(180, 180, 180)">D:\ode-0.16.4\bindings\python></span>python setup.py build_ext</code>
 
-「D:\ode-0.16.4\bindings\python」にode.cファイルが作成され、コマンドプロンプトに「#error:  You must #define dSINGLE or 
-dDOUBLE」が表示されます。
-　次に、「D:\ode-0.16.4\bindings\python」に作成されたode.cファイルの先頭（21行目）に下記のコードを追加します。
+</pre>
+        「D:\ode-0.16.4\bindings\python」にode.cファイルが作成され、コマンドプロンプトに「#error:  You must #define dSINGLE or 
+        dDOUBLE」が表示されます。
+        　次に、「D:\ode-0.16.4\bindings\python」に作成されたode.cファイルの先頭（21行目）に下記のコードを追加します。
+<pre style = "font-size: 15px">
 
 <code style="background-color:#23262E;padding:20px"><span style="color:#C74DED">#define</span><span style="color:#FFE66D"> dDOUBLE</span></code>
 
-もう一度、コマンドプロンプトで、下記のようにsetup.pyをビルドします。
+</pre>
+        もう一度、コマンドプロンプトで、下記のようにsetup.pyをビルドします。
+<pre style = "font-size: 15px">
 
 <code style="background-color:#23262E;padding:20px"><span style="color:rgb(180, 180, 180)">D:\ode-0.16.4\bindings\python></span>python setup.py build_ext</code>
 
-「D:\ode-0.16.4\bindings\python\build\lib.win-amd64-cpython-312」にode.cp312-win_amd64.pydファイルが作成されます。
-ode.cp312-win_amd64.pydは、PyODEのコードを実行するのに必要なファイルです。
+</pre>
+        「D:\ode-0.16.4\bindings\python\build\lib.win-amd64-cpython-312」にode.cp312-win_amd64.pydファイルが作成されます。
+        ode.cp312-win_amd64.pydは、PyODEのコードを実行するのに必要なファイルです。
 
-</pre> 
+        </p> 
         <hr>
         <h3 id="info0005">DLLファイルとpydファイルを使用してPyODEのコードを含むPythonファイルを実行</h3>
 
