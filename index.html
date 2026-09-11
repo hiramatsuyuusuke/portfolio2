@@ -118,10 +118,10 @@
     <p style = "font-size: 15px">
     ・Dドライブ直下にode-0.16.4フォルダをコピーします。<br><br>
     ・コマンドプロンプトで、下記のようにpremake4.exeファイルを実行します。<br><br>
-
+    </p>
 <pre style = "font-size: 15px">
 <code style="background-color:#23262E;padding:20px"><span style="color:rgb(180, 180, 180)">D:\ode-0.16.4\build></span>premake4.exe --with-tests --with-demos vs2010</code>
-    </p>
+
 </pre>
     <p style = "font-size: 15px">
     ・「D:\ode-0.16.4\build\vs2010\ode.sln」が作成されるので、ode.slnファイルを開きます。<br><br>
@@ -154,12 +154,17 @@
 
 <pre style="background-color:#23262E;width:750px;padding:20px">
 <code><span style="color:rgb(180, 180, 180)">D:\></span>path=%path%;c:\pkg-config\bin
-<span style="color:rgb(180, 180, 180)">D:\></span>set include=%include%;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt
-<span style="color:rgb(180, 180, 180)">D:\></span>set include=%include%;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared
+<span style="color:rgb(180, 180, 180)">D:\></span>set include=%include%;C:\Program Files (x86)\Wi
+ndows Kits\10\Include\10.0.22621.0\ucrt
+<span style="color:rgb(180, 180, 180)">D:\></span>set include=%include%;C:\Program Files (x86)\Wi
+ndows Kits\10\Include\10.0.22621.0\shared
 <span style="color:rgb(180, 180, 180)">D:\></span>set include=%include%;D:\ode-0.16.4\include
-<span style="color:rgb(180, 180, 180)">D:\></span>set LIB=%LIB%;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0\um\x64
-<span style="color:rgb(180, 180, 180)">D:\></span>set LIB=%LIB%;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0\ucrt\x64
-<span style="color:rgb(180, 180, 180)">D:\></span>set Path=%Path%;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64
+<span style="color:rgb(180, 180, 180)">D:\></span>set LIB=%LIB%;C:\Program Files (x86)\Windows Ki
+ts\10\Lib\10.0.19041.0\um\x64
+<span style="color:rgb(180, 180, 180)">D:\></span>set LIB=%LIB%;C:\Program Files (x86)\Windows Ki
+ts\10\Lib\10.0.19041.0\ucrt\x64
+<span style="color:rgb(180, 180, 180)">D:\></span>set Path=%Path%;C:\Program Files (x86)\Windows 
+Kits\10\bin\10.0.19041.0\x64
 <span style="color:rgb(180, 180, 180)">D:\></span>set PKG_CONFIG_PATH=D:\ode-0.16.4
 </code></pre>
 　次に、「D:\ode-0.16.4\bindings\python」にあるode.pyxの3559行目のdSpaceCollide()関数と4463行目のdSpaceCollide2()関数
