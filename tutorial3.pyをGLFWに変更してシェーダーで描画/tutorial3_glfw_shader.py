@@ -128,19 +128,38 @@ def draw_body(body, vertices, indices):
 
     #回転前の頂点座標データ
     v = []
-    # back face
-    v.append( (-box_vx, -box_vy, -box_vz) )   #0
-    v.append( ( box_vx, -box_vy, -box_vz) )   #1
-    v.append( ( box_vx,  box_vy, -box_vz) )   #2
-    v.append( (-box_vx,  box_vy, -box_vz) )   #3
-    # front face
-    v.append( (-box_vx, -box_vy,  box_vz) )   #4
-    v.append( ( box_vx, -box_vy,  box_vz) )   #5
-    v.append( ( box_vx,  box_vy,  box_vz) )   #6
-    v.append( (-box_vx,  box_vy,  box_vz) )   #7
-
-   #回転前の頂点の法線データ（頂点の法線）
     n = []
+    f = []
+    # Read lines from a file
+    with open('tmp3.txt', 'r') as file:
+        lines = file.readlines()
+
+    for line in lines:
+        elem = line.strip().split(" ")
+        if elem[0] == "v":
+            v.append( (float(elem[1]), float(elem[2]), float(elem[3])) )
+        if elem[0] == "vn":
+            n.append( (float(elem[1]), float(elem[2]), float(elem[3])) )    
+        if elem[0] == "f":
+            elem_f1 = elem[1].strip().split("/")
+            elem_f2 = elem[2].strip().split("/")
+            elem_f3 = elem[3].strip().split("/")
+            f.append( (int(elem_f1[0])-1, int(elem_f2[0])-1, int(elem_f3[0])-1) )
+
+    """
+    # back face
+    v.append( (-0.5, -0.1, -0.1) )   #0
+    v.append( ( 0.5, -0.1, -0.1) )   #1
+    v.append( ( 0.5,  0.1, -0.1) )   #2
+    v.append( (-0.5,  0.1, -0.1) )   #3
+    # front face
+    v.append( (-0.5, -0.1,  0.1) )   #4
+    v.append( ( 0.5, -0.1,  0.1) )   #5
+    v.append( ( 0.5,  0.1,  0.1) )   #6
+    v.append( (-0.5,  0.1,  0.1) )   #7
+    """
+    """
+   #回転前の頂点の法線データ（頂点の法線）
     # back face
     n.append(( -1, -1, -1))    # 0
     n.append((  1, -1, -1))    # 1
@@ -151,20 +170,27 @@ def draw_body(body, vertices, indices):
     n.append((  1, -1,  1))    # 5
     n.append((  1,  1,  1))    # 6
     n.append(( -1,  1,  1))    # 7
-
+    """
     # Cube vertices and normals (position XYZ + normals)
     arr1 = np.array([], dtype=np.float32)
-    for i in range(8):
+    i = 0
+    for tmp in v:
                           # vertex positions          # normals
         arr2 = np.array([ v[i][0], v[i][1], v[i][2],  n[i][0], n[i][1], n[i][2]], dtype=np.float32)
         arr1 = np.append(arr1, arr2)
+        i +=1
+
     vertices_result = np.append(vertices, arr1)
     
+    """
     # Indices defining the 12 triangles composing the cube
     if len(indices) == 0:
         i = 0
     else:
+        
         i = max(indices) + 1
+
+
     arr3 = np.array([
         0+i,1+i,2+i, 2+i,3+i,0+i,  # back face
         4+i,5+i,6+i, 6+i,7+i,4+i,  # front face
@@ -173,6 +199,9 @@ def draw_body(body, vertices, indices):
         4+i,7+i,3+i, 3+i,0+i,4+i,  # left face
         5+i,6+i,2+i, 2+i,1+i,5+i   # right face
     ], dtype=np.uint32)
+    """
+
+    arr3 = np.array([f], dtype=np.uint32)
     indices_result = np.append(indices, arr3)
 
     return vertices_result, indices_result
@@ -212,7 +241,7 @@ def drop_object():
 
     global bodies, geoms, counter, objcount
 
-    body, geom = create_box(world, space, 1000, 1.0,0.2,0.2)
+    body, geom = create_box(world, space, 100, 2.0, 0.2, 0.2)
     body.setPosition( (random.gauss(0,0.03),3.0,random.gauss(0,0.03)) )
     theta = random.uniform(0,2*pi)
     ct = cos (theta)
@@ -467,16 +496,16 @@ def main():
             time.sleep(t)
         
         counter += 1
-
+        
         if state==0:
             if counter==20:
                 drop_object()
-            if objcount==30:
+            if objcount==10:
                 state=1
                 counter=0
         # State 1: Explosion and pulling back the objects
         elif state==1:
-            if counter==100:
+            if counter==50:
                 explosion()
             if counter>300:
                 pull()
