@@ -205,23 +205,21 @@ void main()
     vec3 diffuse = diff * lightColor;
 
     //
-    //vec3 result = ((1.0 - shadow * 0.7) * (diffuse) + ambient) * objectColor;
-    vec3 result = ((1.0 - shadow * fs_in.Alpha) * (diffuse) + ambient);
+    vec3 result = ((1.0 - shadow) * diffuse + ambient);
+
+    //
     //gl_FragColor = vec4(result, 1.0);
     gl_FragColor = fs_in.Alpha * texture2D(texture0, fs_in.UV) + fs_in.Alpha * vec4(result, 1.0);
 }
 """
 
 
-# シェーダー用の頂点データと法線データを作成
+# シェーダー用の頂点データを作成
 def draw_body(body, vertices, indices):
-    """Draw an ODE body.
+
+    """「衝突判定無し」のdragonを取得.
     """
     
-
-    
-    
-    #dragonの描画データを取得
     v = []  # .objファイルの頂点の座標のデータ
     vn = [] # .objファイルの頂点の法線のデータ
     vt = [] # .objファイルの頂点のUV座標のデータ
@@ -263,11 +261,7 @@ def draw_body(body, vertices, indices):
             fvt.append( (int(elem_f1[1])-1, int(elem_f2[1])-1, int(elem_f3[1])-1) ) #3つの頂点のuv座標のindex
             fvn.append( (int(elem_f1[2])-1, int(elem_f2[2])-1, int(elem_f3[2])-1) ) #3つの頂点の法線ベクトルのindex
 
-    for tmp in fv:  #fv:(三角形の1つ目の頂点の座標のindex, 三角形の2つ目の頂点の座標のindex, 三角形の3つ目の頂点の座標のindex)
-        fv_sort.append(0)
-        fv_sort.append(0)
-        fv_sort.append(0)
-
+    # シェーダーに転送するために、読み込んだデータを並べ替える
     i = 0
     i2 = 0
     for tmp in fv:
@@ -279,8 +273,7 @@ def draw_body(body, vertices, indices):
         v_sort.append(v[j])
         vt_sort.append(vt[j1])    
         vn_sort.append(vn[j2])
-        fv_sort[i2] = 0 + i2    #indices
-
+        fv_sort.append(i2)  #indices
 
         #三角形の2つ目の頂点
         j = fv[i][1]    #頂点の座標のindex
@@ -289,8 +282,7 @@ def draw_body(body, vertices, indices):
         v_sort.append(v[j])
         vt_sort.append(vt[j1])    
         vn_sort.append(vn[j2])        
-        fv_sort[i2+1] = 1 + i2    #indices
-
+        fv_sort.append(i2 + 1)  #indices
 
         #三角形の3つ目の頂点
         j = fv[i][2]    #頂点の座標のindex
@@ -299,13 +291,12 @@ def draw_body(body, vertices, indices):
         v_sort.append(v[j])
         vt_sort.append(vt[j1])        
         vn_sort.append(vn[j2])
-        fv_sort[i2+2] = 2 + i2    #indices
+        fv_sort.append(i2 + 2)  #indices
 
         i += 1
         i2 += 3
     
-
-    # vertices and normals and uv座標(position XYZ + normals + uv座標)
+    # シェーダーに転送するデータの作成。vertices and normals and uv座標(position XYZ + normals + uv座標)
     arr1 = np.array([], dtype=np.float32)
     i = 0
     for tmp in v_sort:
@@ -321,12 +312,13 @@ def draw_body(body, vertices, indices):
 
     vertices_result = np.append(vertices, arr1)
 
-
     # indices
     arr3 = np.array([fv_sort], dtype=np.uint32)
     indices_result = np.append(indices, arr3)
 
 
+    """Draw an ODE body.
+    """
     #boxの描画データの取得
     #boxの頂点座標の計算
     lx,ly,lz = body.boxsize
@@ -383,7 +375,7 @@ def draw_body(body, vertices, indices):
         elif i < 24:
             n.append((  1,  0,  0))  # right face   # 20,21,22,23
 
-    # Cube vertices and normals (position XYZ + normals)
+    #  シェーダーに転送するデータの作成。Cube vertices and normals (position XYZ + normals)
     arr1 = np.array([], dtype=np.float32)
     for i in range(24):
                           # vertex positions          # normals                    #UV #alpha
@@ -407,7 +399,6 @@ def draw_body(body, vertices, indices):
     ], dtype=np.uint32)
     indices_result = np.append(indices_result, arr3)
 
-    
     return vertices_result, indices_result
 
 # geometric utility functions
@@ -754,8 +745,8 @@ def main():
 
 
     #テクスチャ読み込み#
-    tex_dragon = load_texture("dragon.png")
-    tex_dragon = load_texture("dragon.png")
+    tex_dragon = load_texture("dragon.png") # テクスチャ0を生成
+    tex_dragon = load_texture("dragon.png") # テクスチャ1を生成
     # テクスチャ0にバインド
     glActiveTexture(GL_TEXTURE0)
     glBindTexture(GL_TEXTURE_2D, tex_dragon)
@@ -822,11 +813,8 @@ def main():
                 vertices, indices = draw_body(body, vertices, indices)
                 #頂点データリスト（シェーダー用のリスト）にbody（ODEのオブジェクト）の頂点データを追加
                 vertices_data_list.append([vertices, indices, index])
-
-
-
-        vertices_data_list2 = [] #[ [vertices, indices, ode object number], ... ]    
-        vertices_data_list2 = copy.deepcopy(vertices_data_list)
+ 
+        vertices_data_list_tmp = copy.deepcopy(vertices_data_list)
         #床のverticesデータを作成
                                     # positions         # normals        #UV    #alpha
         floor_vertices = np.array([ -3.0,  0.0,  -3.0,   0.0, 1.0,  0.0,  0.1, 0.1, 0.4,    #床 0
@@ -838,14 +826,10 @@ def main():
         floor_indices = np.array([0,1,2,  3,1,2  #床
                         ], dtype=np.uint32)
         #オブジェクトごとの頂点データリストに床の頂点データを追加
-        vertices_data_list2.append([floor_vertices, floor_indices, None])
-        #オブジェクトごとの頂点データリスト（シェーダー用のリスト）の要素数 = 床の数 = 1
-        init_obj_num = len(vertices_data_list)
-
-
+        vertices_data_list_tmp.append([floor_vertices, floor_indices, None])
 
         #シェーダーで描画
-        use_shader_in_tutorial3(shader_program, depth_shader_program, VAO, VBO, EBO, FBO, depth_texture, vertices_data_list2)  
+        use_shader_in_tutorial3(shader_program, depth_shader_program, VAO, VBO, EBO, FBO, depth_texture, vertices_data_list_tmp)  
 
         #物理演算
         t = dt - (time.time() - lasttime)
